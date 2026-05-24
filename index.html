@@ -1135,6 +1135,14 @@ function gerarPDF(){
   function novaPagina(){
     doc.addPage();
     pag++;
+    // fundo escuro igual à capa
+    doc.setFillColor(...BG);
+    doc.rect(0, 0, W, H, 'F');
+    // linha lateral
+    doc.setFillColor(...ROXO);
+    doc.rect(0, 0, 4, H, 'F');
+    doc.setFillColor(...OURO);
+    doc.rect(0, 0, 1.5, H, 'F');
     y = 15;
     rodape();
   }
@@ -1144,11 +1152,14 @@ function gerarPDF(){
   }
 
   function rodape(){
-    doc.setFillColor(...BG);
+    doc.setFillColor(10, 3, 22);
     doc.rect(0, H-10, W, 10, 'F');
+    doc.setDrawColor(...ROXO);
+    doc.setLineWidth(0.3);
+    doc.line(ML, H-10, W-MR, H-10);
     doc.setFontSize(7);
     doc.setTextColor(...CINZA);
-    doc.text(`Enigma Púrpura — Avaliação Alpha 2026 — Tester: ${testerAtual} — Pág. ${pag}`,
+    doc.text('Enigma Purpura — Avaliacao Alpha 2026 — Tester: '+testerAtual+' — Pag. '+pag,
       W/2, H-4, {align:'center'});
   }
 
@@ -1212,18 +1223,22 @@ function gerarPDF(){
 
   function secHeader(titulo, subtitulo=''){
     checarY(18);
+    // faixa ouro fina à esquerda
+    doc.setFillColor(...OURO);
+    doc.rect(ML, y, 2, 10, 'F');
+    // fundo roxo
     doc.setFillColor(...ROXO);
-    doc.rect(ML, y, TW, 9, 'F');
+    doc.rect(ML+2, y, TW-2, 10, 'F');
     doc.setFontSize(10);
     doc.setTextColor(...BRANCO);
     doc.setFont('helvetica','bold');
-    doc.text(titulo, ML+3, y+6);
+    doc.text(titulo, ML+6, y+7);
     if(subtitulo){
       doc.setFontSize(7);
       doc.setTextColor(...OURO);
-      doc.text(subtitulo, W-MR-3, y+6, {align:'right'});
+      doc.text(subtitulo, W-MR-3, y+7, {align:'right'});
     }
-    y += 12;
+    y += 14;
   }
 
   function subHeader(titulo){
@@ -1439,8 +1454,8 @@ function gerarPDF(){
       subHeader('11.2 — Notas por Área');
       checarY(AREAS_NOTA.length * 8 + 4);
       AREAS_NOTA.forEach(a => {
-        const v = respostas[a.k]||'';
-        const estrelas = v ? '★'.repeat(parseInt(v))+'☆'.repeat(5-parseInt(v)) : '—';
+        const v = parseInt(respostas[a.k]||'0');
+        const estrelas = v > 0 ? '*'.repeat(v) + '  (' + v + '/5)' : '— (nao respondido)';
         doc.setFontSize(9);
         doc.setTextColor(a.destaque ? OURO[0] : TEXTO[0],
                          a.destaque ? OURO[1] : TEXTO[1],
@@ -1448,7 +1463,7 @@ function gerarPDF(){
         doc.setFont('helvetica', a.destaque?'bold':'normal');
         doc.text(a.l, ML, y);
         doc.setTextColor(...OURO);
-        doc.text(estrelas+' ('+( v||'—')+'/5)', W-MR, y, {align:'right'});
+        doc.text(estrelas, W-MR, y, {align:'right'});
         y += 7;
         checarY(8);
       });
