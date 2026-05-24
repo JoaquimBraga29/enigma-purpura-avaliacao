@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Enigma Púrpura — Avaliação Alpha</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet"/>
+<style>
+/* ── BASE ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --roxo:#4A1A7A;--roxo-mid:#6B2FA0;--roxo-cl:#9B59D0;
+  --bg:#0F0520;--card:#1A0A2E;--card2:#220E3A;
+  --borda:#3D1A60;--ouro:#C9A84C;--ouro-cl:#E8C97A;
+  --branco:#F0EBF8;--cinza:#A89BC2;--texto:#D4C8E8;
+  --verde:#2ECC71;--vermelho:#E74C3C;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--texto);font-family:'Crimson Pro',Georgia,serif;
+  font-size:16px;line-height:1.65;min-height:100vh;overflow-x:hidden}
+
+/* grain */
+body::before{content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:.35}
+
+/* linha lateral dourada */
+body::after{content:'';position:fixed;top:0;left:0;width:3px;height:100%;
+  background:linear-gradient(180deg,var(--ouro),var(--roxo-mid),var(--ouro));z-index:100}
+
+/* ── TELA DE LOGIN ── */
+#telaLogin{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;padding:2rem;position:relative;z-index:1}
+
+.login-box{
+  background:var(--card);border:1px solid var(--borda);border-radius:16px;
+  padding:3rem 2.5rem;max-width:440px;width:100%;text-align:center;
+  box-shadow:0 0 60px rgba(107,47,160,.25)}
+
+.login-olho{font-size:3rem;margin-bottom:1rem;
+  animation:pulso 3s ease-in-out infinite;display:block}
+@keyframes pulso{
+  0%,100%{filter:drop-shadow(0 0 8px var(--roxo-cl))}
+  50%{filter:drop-shadow(0 0 22px var(--ouro))}}
+
+.login-titulo{font-family:'Cinzel',serif;font-size:1.7rem;font-weight:700;
+  color:var(--branco);letter-spacing:.06em;margin-bottom:.3rem}
+.login-sub{font-size:.85rem;color:var(--cinza);margin-bottom:2rem;
+  letter-spacing:.05em}
+
+.login-label{display:block;font-size:.78rem;color:var(--cinza);
+  letter-spacing:.08em;margin-bottom:.5rem;text-align:left}
+.login-input{width:100%;background:var(--card2);border:1px solid var(--borda);
+  border-radius:8px;color:var(--branco);font-family:'Crimson Pro',serif;
+  font-size:1.1rem;padding:.7rem 1rem;outline:none;
+  transition:border-color .2s;margin-bottom:1.2rem}
+.login-input:focus{border-color:var(--roxo-cl)}
+.login-input::placeholder{color:var(--cinza);font-style:italic}
+
+.login-testers{margin-bottom:1.5rem;text-align:left}
+.login-testers-label{font-size:.72rem;color:var(--cinza);
+  letter-spacing:.06em;margin-bottom:.5rem;display:block}
+.login-chips{display:flex;flex-wrap:wrap;gap:.4rem}
+.login-chip{background:var(--card2);border:1px solid var(--borda);
+  border-radius:20px;padding:.25rem .8rem;font-size:.82rem;
+  cursor:pointer;transition:all .15s;color:var(--cinza)}
+.login-chip:hover{border-color:var(--ouro);color:var(--ouro-cl)}
+.login-chip.tem-dados{border-color:var(--verde);color:var(--verde)}
+
+.btn-entrar{width:100%;padding:.9rem;background:linear-gradient(135deg,var(--roxo),var(--roxo-mid));
+  border:1px solid var(--ouro);border-radius:8px;color:var(--ouro-cl);
+  font-family:'Cinzel',serif;font-size:.95rem;letter-spacing:.1em;
+  cursor:pointer;transition:all .2s}
+.btn-entrar:hover{box-shadow:0 0 24px rgba(107,47,160,.6)}
+
+.login-novo{margin-top:1rem;font-size:.78rem;color:var(--cinza)}
+
+/* ── APP PRINCIPAL ── */
+#telaApp{display:none;min-height:100vh;position:relative;z-index:1}
+
+/* topbar */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  background:rgba(15,5,32,.95);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--borda);
+  display:flex;align-items:center;gap:1rem;
+  padding:.6rem 1.5rem;flex-wrap:wrap}
+
+.topbar-logo{font-family:'Cinzel',serif;font-size:.85rem;
+  color:var(--ouro);letter-spacing:.1em;white-space:nowrap}
+.topbar-tester{font-size:.82rem;color:var(--cinza);
+  display:flex;align-items:center;gap:.4rem}
+.topbar-tester strong{color:var(--branco)}
+
+.topbar-prog{flex:1;min-width:120px}
+.prog-bar-bg{height:3px;background:var(--borda);border-radius:2px;overflow:hidden}
+.prog-bar-fill{height:100%;background:linear-gradient(90deg,var(--roxo-mid),var(--ouro));
+  border-radius:2px;width:0%;transition:width .4s}
+.prog-txt{font-size:.7rem;color:var(--cinza);margin-top:.2rem;text-align:right}
+
+.topbar-btns{display:flex;gap:.5rem;margin-left:auto}
+.btn-sm{padding:.3rem .8rem;border-radius:6px;font-family:'Cinzel',serif;
+  font-size:.72rem;letter-spacing:.06em;cursor:pointer;transition:all .18s;border:1px solid var(--borda);
+  background:transparent;color:var(--cinza)}
+.btn-sm:hover{border-color:var(--ouro);color:var(--ouro-cl)}
+.btn-sm.danger{border-color:var(--vermelho);color:var(--vermelho)}
+.btn-sm.danger:hover{background:rgba(231,76,60,.15)}
+
+/* abas */
+.abas-wrap{
+  background:rgba(15,5,32,.9);backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--borda);
+  overflow-x:auto;white-space:nowrap;
+  padding:0 1rem;position:sticky;top:49px;z-index:40}
+.abas-wrap::-webkit-scrollbar{height:3px}
+.abas-wrap::-webkit-scrollbar-thumb{background:var(--borda)}
+
+.aba-btn{
+  display:inline-flex;align-items:center;gap:.4rem;
+  padding:.6rem 1rem;font-size:.8rem;font-family:'Cinzel',serif;
+  letter-spacing:.05em;cursor:pointer;border:none;background:none;
+  color:var(--cinza);border-bottom:2px solid transparent;
+  transition:all .18s;white-space:nowrap}
+.aba-btn:hover{color:var(--branco)}
+.aba-btn.ativa{color:var(--ouro-cl);border-bottom-color:var(--ouro)}
+.aba-prog{font-size:.65rem;background:var(--borda);border-radius:10px;
+  padding:.1rem .4rem;color:var(--cinza);transition:background .3s}
+.aba-btn.completa .aba-prog{background:var(--verde);color:#fff}
+.aba-btn.ativa .aba-prog{background:var(--roxo-mid)}
+
+/* conteúdo das abas */
+.aba-conteudo{display:none;max-width:860px;margin:0 auto;padding:2rem 1.5rem 4rem}
+.aba-conteudo.ativa{display:block}
+
+/* ── ELEMENTOS DE PERGUNTA ── */
+.secao-titulo{font-family:'Cinzel',serif;font-size:1rem;font-weight:600;
+  color:var(--branco);letter-spacing:.05em;margin:1.8rem 0 .8rem;
+  padding-bottom:.5rem;border-bottom:1px solid var(--borda)}
+.secao-titulo:first-child{margin-top:0}
+.secao-resp{font-size:.72rem;color:var(--cinza);font-weight:400;
+  display:block;margin-top:.2rem;letter-spacing:.03em}
+
+.card{background:var(--card2);border:1px solid var(--borda);border-radius:8px;
+  padding:1rem 1.1rem .85rem;margin-bottom:.6rem;transition:border-color .2s}
+.card:hover{border-color:var(--roxo-cl)}
+.card.respondida{border-color:var(--roxo-mid)}
+.card.respondida:hover{border-color:var(--roxo-cl)}
+
+.card-label{font-size:.93rem;color:var(--texto);margin-bottom:.7rem;line-height:1.5}
+.card-num{font-size:.7rem;color:var(--cinza);margin-bottom:.3rem;
+  font-family:'Cinzel',serif;letter-spacing:.06em}
+
+/* likert */
+.likert{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.5rem}
+.likert label{flex:1;min-width:48px;display:flex;flex-direction:column;
+  align-items:center;gap:.25rem;cursor:pointer}
+.likert input[type=radio]{display:none}
+.lk-btn{width:100%;max-width:60px;aspect-ratio:1;border:1.5px solid var(--borda);
+  border-radius:6px;display:flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',serif;font-size:.95rem;color:var(--cinza);
+  background:var(--bg);transition:all .15s}
+.likert label:hover .lk-btn{border-color:var(--roxo-cl);color:var(--branco);
+  background:rgba(107,47,160,.2)}
+.likert input:checked+.lk-btn{background:var(--roxo-mid);border-color:var(--ouro);
+  color:var(--ouro-cl);box-shadow:0 0 10px rgba(107,47,160,.5)}
+.lk-desc{font-size:.6rem;color:var(--cinza);text-align:center;line-height:1.2}
+
+/* yn chips */
+.yn-grupo{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.4rem}
+.yn-grupo label{display:flex;align-items:center;gap:.35rem;cursor:pointer;
+  font-size:.88rem;padding:.3rem .8rem;border:1px solid var(--borda);
+  border-radius:20px;transition:all .15s;color:var(--cinza)}
+.yn-grupo input[type=radio]{display:none}
+.yn-grupo label:hover{border-color:var(--roxo-cl);color:var(--branco)}
+.yn-grupo label:has(input:checked){background:var(--roxo-mid);
+  border-color:var(--ouro);color:var(--ouro-cl)}
+
+/* emoti */
+.emoti-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.6rem}
+.emoti-row-label{min-width:150px;font-size:.88rem;color:var(--cinza)}
+.emoti-opts{display:flex;gap:.35rem;flex-wrap:wrap}
+.emoti-opts label{cursor:pointer;font-size:.8rem;padding:.22rem .65rem;
+  border:1px solid var(--borda);border-radius:4px;transition:all .15s;color:var(--texto)}
+.emoti-opts input{display:none}
+.emoti-opts label:hover{border-color:var(--roxo-cl)}
+.emoti-opts label:has(input:checked){background:var(--roxo-mid);
+  border-color:var(--ouro);color:var(--ouro-cl)}
+
+/* obs */
+.obs-label{font-size:.72rem;color:var(--cinza);font-style:italic;
+  display:block;margin-top:.5rem}
+.obs-field{width:100%;background:transparent;border:none;
+  border-bottom:1px dashed var(--borda);color:var(--texto);
+  font-family:'Crimson Pro',serif;font-size:.87rem;padding:.3rem 0;
+  resize:none;outline:none;transition:border-color .2s}
+.obs-field::placeholder{color:var(--cinza);font-style:italic}
+.obs-field:focus{border-bottom-color:var(--roxo-cl)}
+
+/* campo texto livre */
+.campo-texto{width:100%;background:var(--card2);border:1px solid var(--borda);
+  border-radius:6px;color:var(--texto);font-family:'Crimson Pro',serif;
+  font-size:.93rem;padding:.6rem .8rem;resize:vertical;outline:none;
+  transition:border-color .2s;line-height:1.5}
+.campo-texto:focus{border-color:var(--roxo-cl)}
+.campo-texto::placeholder{color:var(--cinza);font-style:italic}
+
+/* id grid */
+.id-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem 1rem}
+.id-campo{display:flex;flex-direction:column;gap:.3rem}
+.id-campo label{font-size:.75rem;color:var(--cinza);letter-spacing:.05em}
+.id-campo input,.id-campo select{background:var(--card2);border:1px solid var(--borda);
+  border-radius:6px;color:var(--texto);font-family:'Crimson Pro',serif;
+  font-size:.95rem;padding:.5rem .8rem;outline:none;transition:border-color .2s}
+.id-campo input:focus,.id-campo select:focus{border-color:var(--roxo-cl)}
+.id-campo select option{background:var(--card2)}
+.id-full{grid-column:1/-1}
+
+/* bugs */
+.bug-card{background:rgba(100,10,10,.18);border:1px solid rgba(180,40,40,.3);
+  border-radius:8px;padding:1rem;margin-bottom:.8rem}
+.bug-titulo{font-family:'Cinzel',serif;font-size:.75rem;color:#E07070;
+  letter-spacing:.1em;margin-bottom:.7rem}
+.bug-campo{display:grid;grid-template-columns:130px 1fr;gap:.3rem .7rem;margin-bottom:.4rem}
+.bug-campo label{font-size:.78rem;color:var(--cinza);padding-top:.2rem}
+.bug-campo input,.bug-campo textarea{background:transparent;border:none;
+  border-bottom:1px dashed rgba(180,40,40,.4);color:var(--texto);
+  font-family:'Crimson Pro',serif;font-size:.87rem;padding:.2rem 0;outline:none;
+  width:100%;resize:none;transition:border-color .2s}
+.bug-campo input:focus,.bug-campo textarea:focus{border-bottom-color:#E07070}
+.sev-grupo{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.4rem}
+.sev-grupo label{font-size:.75rem;padding:.2rem .6rem;
+  border:1px solid rgba(180,40,40,.3);border-radius:12px;cursor:pointer;
+  transition:all .15s;color:var(--cinza)}
+.sev-grupo input{display:none}
+.sev-grupo label:hover{border-color:#E07070}
+.sev-grupo label:has(input:checked){background:rgba(180,40,40,.3);
+  border-color:#E07070;color:#FFAAAA}
+
+/* notas por área */
+.notas-grid{display:grid;gap:.45rem}
+.nota-row{display:flex;align-items:center;gap:.8rem;
+  padding:.55rem .8rem;background:var(--card2);
+  border:1px solid var(--borda);border-radius:6px}
+.nota-row.destaque{border-color:var(--ouro);background:rgba(201,168,76,.07)}
+.nota-row-label{flex:1;font-size:.88rem}
+.nota-row.destaque .nota-row-label{font-family:'Cinzel',serif;
+  font-size:.82rem;color:var(--ouro-cl)}
+.stars{display:flex;flex-direction:row-reverse;gap:.2rem}
+.stars input{display:none}
+.stars label{font-size:1.25rem;color:var(--borda);cursor:pointer;
+  transition:color .15s,transform .1s;line-height:1}
+.stars label:hover,.stars label:hover~label,
+.stars input:checked~label{color:var(--ouro)}
+.stars label:hover{transform:scale(1.2)}
+
+/* ── BOTÃO ENVIAR ── */
+.btn-enviar{display:block;width:100%;margin-top:2rem;padding:1rem;
+  background:linear-gradient(135deg,var(--roxo),var(--roxo-mid));
+  border:1px solid var(--ouro);border-radius:8px;color:var(--ouro-cl);
+  font-family:'Cinzel',serif;font-size:1rem;letter-spacing:.1em;
+  cursor:pointer;transition:all .25s}
+.btn-enviar:hover{box-shadow:0 0 24px rgba(107,47,160,.6)}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(5,2,12,.92);
+  display:none;place-items:center;z-index:200;backdrop-filter:blur(6px)}
+.modal-bg.ativo{display:grid}
+.modal{background:var(--card2);border:1px solid var(--ouro);border-radius:12px;
+  padding:2.2rem;max-width:420px;width:90%;text-align:center;
+  animation:surgir .3s ease}
+@keyframes surgir{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.modal h2{font-family:'Cinzel',serif;color:var(--ouro);margin-bottom:.7rem;font-size:1.3rem}
+.modal p{color:var(--cinza);margin-bottom:1.4rem;font-size:.92rem;line-height:1.6}
+.modal-btns{display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap}
+.modal-btn{padding:.55rem 1.3rem;border-radius:6px;font-family:'Cinzel',serif;
+  font-size:.78rem;letter-spacing:.07em;cursor:pointer;transition:all .18s;
+  border:1px solid var(--borda);background:var(--bg);color:var(--texto)}
+.modal-btn:hover{border-color:var(--ouro);color:var(--ouro-cl)}
+.modal-btn.primary{background:var(--roxo-mid);border-color:var(--ouro);color:var(--ouro-cl)}
+.modal-btn.danger{border-color:var(--vermelho);color:var(--vermelho)}
+.modal-btn.danger:hover{background:rgba(231,76,60,.15)}
+
+/* auto-save indicator */
+.save-indicator{position:fixed;bottom:1.2rem;right:1.5rem;
+  font-size:.72rem;color:var(--verde);opacity:0;
+  transition:opacity .4s;z-index:99;
+  background:rgba(15,5,32,.9);padding:.3rem .7rem;
+  border-radius:20px;border:1px solid rgba(46,204,113,.3)}
+.save-indicator.visivel{opacity:1}
+
+/* aba vazia */
+.aba-info{font-size:.82rem;color:var(--cinza);
+  font-style:italic;margin-bottom:1rem;
+  padding:.6rem .8rem;background:var(--card2);
+  border-radius:6px;border:1px solid var(--borda)}
+
+@media(max-width:600px){
+  .id-grid{grid-template-columns:1fr}
+  .id-full{grid-column:1}
+  .topbar{padding:.5rem .8rem}
+  .aba-conteudo{padding:1.2rem 1rem 3rem}
+  .emoti-row-label{min-width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════ TELA DE LOGIN ══════════════════════ -->
+<div id="telaLogin">
+  <div class="login-box">
+    <span class="login-olho">👁</span>
+    <h1 class="login-titulo">Enigma Púrpura</h1>
+    <p class="login-sub">AVALIAÇÃO ALPHA INTERNA · 2026</p>
+
+    <label class="login-label" for="inputNome">SEU NOME</label>
+    <input class="login-input" type="text" id="inputNome"
+      placeholder="Ex: Joaquim, Gabriel..." autocomplete="off"/>
+
+    <div class="login-testers" id="loginTesters" style="display:none">
+      <span class="login-testers-label">AVALIADORES COM SESSÃO SALVA</span>
+      <div class="login-chips" id="loginChips"></div>
+    </div>
+
+    <button class="btn-entrar" onclick="entrar()">✦ Entrar ✦</button>
+    <p class="login-novo" id="loginNovo"></p>
+  </div>
+</div>
+
+<!-- ══════════════════════ APP PRINCIPAL ══════════════════════ -->
+<div id="telaApp">
+
+  <!-- topbar -->
+  <div class="topbar">
+    <span class="topbar-logo">👁 ENIGMA PÚRPURA</span>
+    <span class="topbar-tester">Avaliador: <strong id="topNome"></strong></span>
+    <div class="topbar-prog">
+      <div class="prog-bar-bg"><div class="prog-bar-fill" id="progFill"></div></div>
+      <div class="prog-txt" id="progTxt">0%</div>
+    </div>
+    <div class="topbar-btns">
+      <button class="btn-sm" onclick="abrirModalEnviar()">✦ Enviar & Gerar PDF</button>
+      <button class="btn-sm danger" onclick="abrirModalSair()">Sair</button>
+    </div>
+  </div>
+
+  <!-- abas -->
+  <div class="abas-wrap" id="abasWrap"></div>
+
+  <!-- conteúdo das abas -->
+  <div id="abasConteudo"></div>
+
+</div>
+
+<!-- indicador de salvamento -->
+<div class="save-indicator" id="saveIndicator">✓ Salvo</div>
+
+<!-- modal enviar -->
+<div class="modal-bg" id="modalEnviar">
+  <div class="modal">
+    <h2>✦ Enviar Avaliação</h2>
+    <p>Isso irá gerar um PDF com todas as suas respostas e enviá-las para a planilha da equipe.<br><br>
+    Você pode continuar editando depois — o PDF pode ser gerado novamente a qualquer momento.</p>
+    <div class="modal-btns">
+      <button class="modal-btn" onclick="fecharModal('modalEnviar')">Cancelar</button>
+      <button class="modal-btn primary" onclick="enviarRespostas()">Gerar PDF & Enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal sair -->
+<div class="modal-bg" id="modalSair">
+  <div class="modal">
+    <h2>Sair</h2>
+    <p>Suas respostas estão salvas automaticamente.<br>Pode entrar novamente a qualquer momento para continuar.</p>
+    <div class="modal-btns">
+      <button class="modal-btn" onclick="fecharModal('modalSair')">Cancelar</button>
+      <button class="modal-btn danger" onclick="sair()">Sair</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal sucesso -->
+<div class="modal-bg" id="modalSucesso">
+  <div class="modal">
+    <h2>✦ PDF Gerado!</h2>
+    <p id="modalSucessoTxt">Seu PDF foi baixado. As respostas também foram enviadas para a planilha da equipe.</p>
+    <div class="modal-btns">
+      <button class="modal-btn primary" onclick="fecharModal('modalSucesso')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// CONFIG — substitua pela URL do seu Google Apps Script
+// ══════════════════════════════════════════════════════════════
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxvv2cFL1VQOFXuZ-U6csuUtrIA4vfrMAnaB7B0PSlFp4f8_Sttc-TTHvwgzPUP7Gx1Tg/exec';
+
+// ══════════════════════════════════════════════════════════════
+// DADOS — perguntas e abas
+// ══════════════════════════════════════════════════════════════
+const ABAS = [
+  { id:'id',     titulo:'Identificação',       icone:'◈' },
+  { id:'gdd',    titulo:'GDD',                 icone:'📄' },
+  { id:'on',     titulo:'Onboarding',          icone:'🎮' },
+  { id:'desafio',titulo:'Desafio & Progresso', icone:'⚔' },
+  { id:'imersao',titulo:'Imersão & Narrativa', icone:'📖' },
+  { id:'modos',  titulo:'Modos de Jogo',       icone:'👥' },
+  { id:'arte',   titulo:'Arte & Visual',       icone:'🎨' },
+  { id:'prog',   titulo:'Programação',         icone:'⚙' },
+  { id:'som',    titulo:'Sound Design',        icone:'🎵' },
+  { id:'ui',     titulo:'UI / UX',             icone:'🖥' },
+  { id:'gd',     titulo:'Game Design',         icone:'🗺' },
+  { id:'geral',  titulo:'Avaliação Geral',     icone:'★' },
+];
+
+const PERGUNTAS = {
+  // GDD
+  gdd_s1: {
+    titulo:'1.1 — Clareza e Organização',
+    pergs:[
+      'O sumário e a estrutura de seções facilitam a leitura e navegação do documento.',
+      'A linguagem usada é objetiva, sem ambiguidades relevantes.',
+      'Os termos técnicos estão bem definidos ou são de fácil compreensão.',
+      'As seções estão completas (ex.: áudio e IA não estão em branco).',
+    ]
+  },
+  gdd_s2: {
+    titulo:'1.2 — Cobertura de Conteúdo',
+    pergs:[
+      'A visão geral do jogo (conceito, gênero, público-alvo) está clara e desenvolvida.',
+      'As mecânicas estão descritas com detalhes suficientes para implementação.',
+      'O fluxo de câmera, controles e HUD estão adequadamente documentados.',
+      'Os 4 níveis estão descritos com sinopse, objetivos, mapa e encontros.',
+      'A seção de IA e Pathfinding está documentada para o escopo do projeto.',
+      'O sistema de diálogos e NPCs está descrito com clareza.',
+    ]
+  },
+  gdd_s3: {
+    titulo:'1.3 — Consistência com o Jogo',
+    pergs:[
+      'O que está descrito no GDD corresponde ao que encontrei na build jogável.',
+      'Não há contradições evidentes entre o GDD e a implementação atual.',
+      'Os personagens descritos no GDD estão bem representados no jogo.',
+    ]
+  },
+  // ONBOARDING
+  on_s1: {
+    titulo:'2.1 — Compreensão Inicial',
+    pergs:[
+      'Entendi o objetivo do jogo nos primeiros minutos sem ajuda externa.',
+      'A cutscene inicial contextualizou bem a narrativa e o que fazer.',
+      'O tutorial foi suficiente para aprender os controles básicos.',
+      'Consegui interagir com o primeiro NPC e pista sem dificuldade excessiva.',
+    ]
+  },
+  on_s2: {
+    titulo:'2.2 — Controles e Movimentação',
+    pergs:[
+      'O sistema de movimentação por swipe respondeu conforme esperado.',
+      'O controle de câmera (lado direito da tela) foi intuitivo.',
+      'As mecânicas de cada personagem (empurrar / arrombar) foram claras.',
+      'Não precisei reaprender os controles diversas vezes.',
+    ]
+  },
+  // DESAFIO
+  des_s1: {
+    titulo:'3.1 — Nível de Desafio (GameFlow)',
+    pergs:[
+      'Os puzzles foram desafiadores sem serem frustrantes.',
+      'A dificuldade dos puzzles aumentou progressivamente ao longo das fases.',
+      'Senti que o jogo respeitou meu ritmo de aprendizagem.',
+      'Nunca me senti completamente travado sem saber o que fazer.',
+    ]
+  },
+  des_s2: {
+    titulo:'3.2 — Objetivos Claros (GameFlow)',
+    pergs:[
+      'Os objetivos de cada fase foram comunicados com clareza.',
+      'As pistas coletadas faziam sentido dentro da narrativa.',
+      'Sabia o que precisava fazer para avançar para a próxima fase.',
+      'A pista principal de cada fase se destacou das pistas secundárias.',
+    ]
+  },
+  des_s3: {
+    titulo:'3.3 — Feedback (GameFlow)',
+    pergs:[
+      'O jogo me informou claramente quando completei um objetivo.',
+      'Recebi feedback imediato ao interagir com objetos e NPCs.',
+      'O contador de pistas na HUD (0/4) foi útil e visível.',
+      'Quando cometi um erro em diálogo, entendi o motivo.',
+    ]
+  },
+  // IMERSÃO
+  im_s1: {
+    titulo:'4.1 — Narrativa e Roteiro',
+    pergs:[
+      'A história despertou meu interesse desde a cutscene inicial.',
+      'Os personagens (Luís, Ângela, Kunto, NPCs) foram apresentados de forma convincente.',
+      'As pistas (cartas, jornais, fotos) enriqueceram a narrativa.',
+      'As cutscenes entre fases contribuíram para o desenvolvimento da história.',
+      'O contexto histórico (Salvador, 1860, abolicionismo) foi bem integrado.',
+      'O diálogo dos NPCs soou natural e coerente com o período histórico.',
+    ]
+  },
+  im_s2: {
+    titulo:'4.2 — Imersão Geral (GameFlow)',
+    pergs:[
+      'Senti-me envolvido emocionalmente com a história e os personagens.',
+      'O estilo visual (p&b com detalhes em roxo) contribuiu para a atmosfera.',
+      'A música e os efeitos sonoros reforçaram a sensação do período histórico.',
+      'Em algum momento esqueci que estava jogando e foquei na investigação.',
+    ]
+  },
+  // MODOS
+  mo_s1: {
+    titulo:'5.1 — Experiência Solo',
+    pergs:[
+      'Jogar solo foi uma experiência satisfatória mesmo sem parceiro.',
+      'As mecânicas de cada personagem fizeram sentido mesmo jogando sozinho.',
+      'O ritmo do jogo solo foi adequado — sem esperas longas nem sobrecarga.',
+      'A narrativa foi compreensível e envolvente no modo solo.',
+      'Os puzzles foram possíveis de resolver sem depender de um segundo jogador.',
+    ]
+  },
+  mo_s2: {
+    titulo:'5.2 — Experiência Cooperativa',
+    pergs:[
+      'A divisão de mecânicas (Luís empurrar / Ângela arrombar) exigiu cooperação real.',
+      'Os puzzles cooperativos (placas de pressão, fase 4) foram satisfatórios em dupla.',
+      'Os diálogos exclusivos por personagem tornaram a cooperação necessária e interessante.',
+      'A conexão entre jogadores foi estável durante a sessão.',
+      'A comunicação entre jogadores foi fluida graças ao design das mecânicas.',
+    ]
+  },
+  mo_s3: {
+    titulo:'5.3 — Comparação entre Modos',
+    pergs:[
+      'O jogo é mais divertido no modo cooperativo do que no solo.',
+      'O modo solo se sustenta bem como experiência independente.',
+      'A transição entre jogar solo e cooperativo foi fluida.',
+      'Os dois modos têm identidade própria e valem ser jogados separadamente.',
+    ]
+  },
+  // ARTE
+  art_s1: {
+    titulo:'6.1 — Modelos e Cenários',
+    pergs:[
+      'Os modelos 3D dos personagens (low poly) comunicaram bem as personalidades.',
+      'Os cenários reproduziram de forma convincente o Salvador histórico de 1860.',
+      'A paleta em p&b com detalhes em roxo foi esteticamente coerente.',
+      'A iluminação guiou minha atenção para os pontos de interesse.',
+      'Os assets mantiveram consistência visual entre as fases.',
+    ]
+  },
+  art_s2: {
+    titulo:'6.2 — Animações e Efeitos',
+    pergs:[
+      'As animações dos personagens (movimentação, interação) foram fluidas.',
+      'Os efeitos visuais de interação (ícone !, pop-ups) foram claros e legíveis.',
+      'As cutscenes foram produzidas com qualidade visual adequada ao estágio do projeto.',
+    ]
+  },
+  // PROGRAMAÇÃO
+  prog_s1: {
+    titulo:'7.1 — Estabilidade e Performance',
+    pergs:[
+      'O jogo rodou sem travamentos ou quedas de framerate perceptíveis.',
+      'Não encontrei bugs que impedissem minha progressão.',
+      'O sistema de colisão funcionou corretamente (empurrar caixas, arrombar portas).',
+      'O pathfinding dos NPCs pareceu natural e sem erros visíveis.',
+      'A câmera (Cinemachine) funcionou sem problemas de clipping ou ângulos errados.',
+      'O modo cooperativo online foi estável e sincronizado.',
+    ]
+  },
+  // SOUND
+  som_s1: {
+    titulo:'8.1 — Trilha Sonora',
+    pergs:[
+      'A trilha sonora (jazz/R&B/blues) contribuiu para a atmosfera investigativa.',
+      'As músicas variaram adequadamente entre as fases, reforçando o ritmo narrativo.',
+      'O volume da música foi equilibrado com os efeitos sonoros.',
+      'A trilha não foi repetitiva a ponto de irritar em 30–60 minutos de jogo.',
+    ]
+  },
+  som_s2: {
+    titulo:'8.2 — Efeitos Sonoros',
+    pergs:[
+      'Os efeitos sonoros de interação (abrir baú, empurrar caixa, coletar pista) foram claros.',
+      'Os sons de interface (menus, confirmações) foram discretos e funcionais.',
+      'O áudio dos NPCs (dublagem) foi compreensível e bem integrado.',
+      'O silêncio/ausência de som foi bem aproveitado para criar tensão ou imersão.',
+    ]
+  },
+  // UI/UX
+  ui_s1: {
+    titulo:'9.1 — Legibilidade e Interface',
+    pergs:[
+      'A HUD (contador de pistas, configurações) foi limpa e não atrapalhou a visão do cenário.',
+      'Os ícones de interação (!) foram legíveis e apareceram no momento correto.',
+      'Os pop-ups de diálogo e itens foram fáceis de ler e fechar.',
+      'O menu principal e de configurações foram intuitivos de usar.',
+      'O tamanho da fonte nos textos das pistas foi legível em tela de celular.',
+    ]
+  },
+  ui_s2: {
+    titulo:'9.2 — Experiência Geral (UX)',
+    pergs:[
+      'A transição entre cutscenes e gameplay foi suave.',
+      'A interface nunca me distraiu da investigação.',
+      'O jogo me deu controle suficiente (pular cutscene, ajustar volume) sem sobrecarregar.',
+      'A tela de escolha de personagem foi clara e funcionou bem.',
+    ]
+  },
+  // GAME DESIGN
+  gd_s1: {
+    titulo:'10.1 — Level Design e Pacing',
+    pergs:[
+      'A ordem das fases criou uma progressão narrativa e mecânica satisfatória.',
+      'Cada fase trouxe elementos novos que sustentaram meu interesse.',
+      'O ritmo das fases (abertas → navio → labirinto) variou bem e evitou monotonia.',
+      'As cutscenes foram posicionadas em momentos dramáticos relevantes.',
+      'O labirinto da Fase 4 (Mercado Modelo) foi desafiador sem se tornar desorientador.',
+    ]
+  },
+  gd_s2: {
+    titulo:'10.2 — Mecânicas e Balanceamento',
+    pergs:[
+      'As mecânicas de cada personagem foram bem balanceadas.',
+      'O sistema de diálogos com escolha de falas funcionou como puzzle satisfatório.',
+      'A progressão de pistas (3 secundárias + 1 principal por fase) foi bem distribuída.',
+      'A restrição de diálogo por personagem (preconceito histórico) enriqueceu a cooperação.',
+    ]
+  },
+};
+
+const AREAS_NOTA = [
+  {k:'n_gdd',   l:'Documentação (GDD)'},
+  {k:'n_arte',  l:'Arte e Modelagem 3D'},
+  {k:'n_prog',  l:'Programação / Estabilidade'},
+  {k:'n_som',   l:'Sound Design / Música'},
+  {k:'n_ui',    l:'UI / UX'},
+  {k:'n_rot',   l:'Narrativa / Roteiro'},
+  {k:'n_gd',    l:'Game Design / Level Design'},
+  {k:'n_coop',  l:'Experiência Cooperativa'},
+  {k:'n_solo',  l:'Experiência Solo'},
+  {k:'n_geral', l:'NOTA GERAL DO JOGO', destaque:true},
+];
+
+// ══════════════════════════════════════════════════════════════
+// ESTADO
+// ══════════════════════════════════════════════════════════════
+let testerAtual = null;
+let respostas   = {};
+let abaAtiva    = 'id';
+let saveTimer   = null;
+
+function chaveLS(nome){ return `ep_tester_${nome.toLowerCase().replace(/\s+/g,'_')}`; }
+function listarTesters(){
+  const lista = [];
+  for(let i=0;i<localStorage.length;i++){
+    const k = localStorage.key(i);
+    if(k.startsWith('ep_tester_')) lista.push(k.replace('ep_tester_',''));
+  }
+  return lista;
+}
+
+function salvarLocal(){
+  if(!testerAtual) return;
+  localStorage.setItem(chaveLS(testerAtual), JSON.stringify(respostas));
+  mostrarSaveIndicator();
+}
+
+function mostrarSaveIndicator(){
+  const el = document.getElementById('saveIndicator');
+  el.classList.add('visivel');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>el.classList.remove('visivel'), 1800);
+}
+
+function carregarLocal(nome){
+  const raw = localStorage.getItem(chaveLS(nome));
+  return raw ? JSON.parse(raw) : {};
+}
+
+// ══════════════════════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════════════════════
+function initLogin(){
+  const testers = listarTesters();
+  if(testers.length > 0){
+    document.getElementById('loginTesters').style.display = 'block';
+    const chips = document.getElementById('loginChips');
+    chips.innerHTML = '';
+    testers.forEach(t => {
+      const chip = document.createElement('button');
+      chip.className = 'login-chip tem-dados';
+      chip.textContent = t;
+      chip.onclick = () => {
+        document.getElementById('inputNome').value = t;
+        document.getElementById('loginNovo').textContent = '↑ Sessão salva encontrada';
+      };
+      chips.appendChild(chip);
+    });
+  }
+  document.getElementById('inputNome').addEventListener('keydown', e=>{
+    if(e.key==='Enter') entrar();
+  });
+}
+
+function entrar(){
+  const nome = document.getElementById('inputNome').value.trim();
+  if(!nome){ alert('Por favor, informe seu nome.'); return; }
+  testerAtual = nome;
+  respostas   = carregarLocal(nome);
+
+  document.getElementById('telaLogin').style.display = 'none';
+  document.getElementById('telaApp').style.display   = 'block';
+  document.getElementById('topNome').textContent      = nome;
+
+  buildApp();
+  irAba('id');
+  preencherFormulario();
+  updateProgress();
+}
+
+function sair(){
+  salvarLocal();
+  testerAtual = null; respostas = {};
+  document.getElementById('telaApp').style.display   = 'none';
+  document.getElementById('telaLogin').style.display = 'flex';
+  fecharModal('modalSair');
+  initLogin();
+}
+
+// ══════════════════════════════════════════════════════════════
+// BUILD DO APP
+// ══════════════════════════════════════════════════════════════
+function buildApp(){
+  buildAbas();
+  buildConteudo();
+}
+
+function buildAbas(){
+  const wrap = document.getElementById('abasWrap');
+  wrap.innerHTML = '';
+  ABAS.forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = 'aba-btn';
+    btn.id = `aba-btn-${a.id}`;
+    btn.onclick = () => irAba(a.id);
+    btn.innerHTML = `${a.icone} ${a.titulo} <span class="aba-prog" id="aba-prog-${a.id}">0</span>`;
+    wrap.appendChild(btn);
+  });
+}
+
+function buildConteudo(){
+  const cont = document.getElementById('abasConteudo');
+  cont.innerHTML = '';
+  ABAS.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'aba-conteudo';
+    div.id = `aba-${a.id}`;
+    div.innerHTML = buildAba(a.id);
+    cont.appendChild(div);
+  });
+  // eventos em todos os inputs
+  cont.querySelectorAll('input,textarea,select').forEach(el => {
+    el.addEventListener('change', onInput);
+    el.addEventListener('input',  onInput);
+  });
+}
+
+function onInput(e){
+  const key = e.target.name || e.target.id;
+  if(!key) return;
+  respostas[key] = e.target.value;
+  salvarLocal();
+  updateProgress();
+  // marca card como respondido
+  const card = e.target.closest('.card');
+  if(card) card.classList.add('respondida');
+}
+
+function preencherFormulario(){
+  Object.entries(respostas).forEach(([k,v]) => {
+    const el = document.querySelector(`[name="${k}"],[id="${k}"]`);
+    if(!el) return;
+    if(el.type === 'radio'|| el.type === 'checkbox'){
+      const r = document.querySelector(`[name="${k}"][value="${v}"]`);
+      if(r){ r.checked = true; r.closest('.card')?.classList.add('respondida'); }
+    } else {
+      el.value = v;
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// BUILDERS DE ABA
+// ══════════════════════════════════════════════════════════════
+function buildAba(id){
+  switch(id){
+    case 'id':      return buildAbaId();
+    case 'gdd':     return buildAbaLikerts('gdd',  ['gdd_s1','gdd_s2','gdd_s3'],
+      [{nome:'gdd_falta', label:'O que falta ou está incompleto no GDD que prejudicou sua compreensão?', rows:3},
+       {nome:'gdd_detalhe', label:'Alguma seção poderia ser mais detalhada? Qual e por quê?', rows:3}]);
+    case 'on':      return buildAbaLikerts('on', ['on_s1','on_s2'],
+      [], buildYNBlock());
+    case 'desafio': return buildAbaLikerts('desafio', ['des_s1','des_s2','des_s3'],
+      [{nome:'travado', label:'Em que momentos ficou travado ou confuso? Descreva a fase e a situação:', rows:3}]);
+    case 'imersao': return buildAbaImersao();
+    case 'modos':   return buildAbaModos();
+    case 'arte':    return buildAbaLikerts('arte', ['art_s1','art_s2'],
+      [{nome:'obs_arte', label:'Feedback para a equipe de arte:', rows:2}]);
+    case 'prog':    return buildAbaProg();
+    case 'som':     return buildAbaLikerts('som', ['som_s1','som_s2'],
+      [{nome:'obs_som', label:'Feedback para o Sound Design:', rows:2}]);
+    case 'ui':      return buildAbaLikerts('ui', ['ui_s1','ui_s2'],
+      [{nome:'obs_ui', label:'Feedback para UI/UX:', rows:2}]);
+    case 'gd':      return buildAbaLikerts('gd', ['gd_s1','gd_s2'],
+      [{nome:'obs_gd', label:'Feedback para Game Design:', rows:2}]);
+    case 'geral':   return buildAbaGeral();
+    default: return '<p>Em breve.</p>';
+  }
+}
+
+function buildAbaId(){
+  return `
+  <h2 class="secao-titulo">Dados do Avaliador</h2>
+  <div class="id-grid">
+    <div class="id-campo">
+      <label>Idade</label>
+      <input type="number" name="idade" min="10" max="99" placeholder="—"/>
+    </div>
+    <div class="id-campo">
+      <label>Gênero</label>
+      <select name="genero">
+        <option value="">—</option>
+        <option>Masculino</option><option>Feminino</option><option>Prefiro não dizer</option>
+      </select>
+    </div>
+    <div class="id-campo">
+      <label>Duração da sessão solo (min)</label>
+      <input type="number" name="dur_solo" min="1" placeholder="ex: 40"/>
+    </div>
+    <div class="id-campo">
+      <label>Duração da sessão coop (min)</label>
+      <input type="number" name="dur_coop" min="1" placeholder="ex: 50"/>
+    </div>
+    <div class="id-campo">
+      <label>Dispositivo (SO / RAM)</label>
+      <input type="text" name="dispositivo" placeholder="ex: Android 14 / 6GB"/>
+    </div>
+    <div class="id-campo">
+      <label>Dificuldade geral percebida (1–5)</label>
+      ${buildLikertHTML('dificuldade_geral')}
+    </div>
+    <div class="id-campo id-full">
+      <label>Jogos que costuma jogar</label>
+      <input type="text" name="jogos" placeholder="ex: Genshin Impact, Among Us, Minecraft..."/>
+    </div>
+  </div>`;
+}
+
+function buildLikertHTML(nome){
+  let h = `<div class="likert">`;
+  for(let v=1;v<=5;v++){
+    h += `<label>
+      <input type="radio" name="${nome}" value="${v}"/>
+      <div class="lk-btn">${v}</div>
+      <span class="lk-desc">${v===1?'DT':v===5?'CT':''}</span>
+    </label>`;
+  }
+  return h + '</div>';
+}
+
+function buildCardLikert(nome, texto, index){
+  return `<div class="card" data-key="${nome}">
+    <p class="card-num">Pergunta ${index}</p>
+    <p class="card-label">${texto}</p>
+    ${buildLikertHTML(nome)}
+    <span class="obs-label">Observação (opcional):</span>
+    <textarea class="obs-field" name="${nome}_obs" rows="1" placeholder="Opcional..."></textarea>
+  </div>`;
+}
+
+function buildAbaLikerts(prefixo, secKeys, abertos=[], extra=''){
+  let h = extra;
+  let totalPergs = 0;
+  secKeys.forEach(sk => {
+    const sec = PERGUNTAS[sk];
+    if(!sec) return;
+    h += `<h2 class="secao-titulo">${sec.titulo}</h2>`;
+    sec.pergs.forEach((p,i) => {
+      const nome = `${sk}_${i+1}`;
+      h += buildCardLikert(nome, p, ++totalPergs);
+    });
+  });
+  abertos.forEach(a => {
+    h += `<div class="card">
+      <p class="card-label">${a.label}</p>
+      <textarea class="campo-texto" name="${a.nome}" rows="${a.rows||3}" placeholder="Sua resposta..."></textarea>
+    </div>`;
+  });
+  return h;
+}
+
+function buildYNBlock(){
+  const yns = [
+    {k:'yn_pista10min', t:'Alcancei a primeira pista em menos de 10 minutos?'},
+    {k:'yn_mecanica',   t:'Entendi a diferença mecânica entre Luís e Ângela logo no início?'},
+    {k:'yn_cutscene',   t:'A cutscene inicial foi clara sem precisar assisti-la duas vezes?'},
+  ];
+  let h = `<h2 class="secao-titulo">2.3 — Perguntas Rápidas</h2>`;
+  yns.forEach(y => {
+    h += `<div class="card">
+      <p class="card-label">${y.t}</p>
+      <div class="yn-grupo">
+        ${['Sim','Não','Parcialmente'].map(o=>`<label><input type="radio" name="${y.k}" value="${o}"/><span>${o}</span></label>`).join('')}
+      </div>
+    </div>`;
+  });
+  h += `<div class="card">
+    <span class="obs-label">Observação sobre o onboarding:</span>
+    <textarea class="obs-field" name="obs_onboarding" rows="2" placeholder="Opcional..."></textarea>
+  </div>`;
+  return h;
+}
+
+function buildAbaImersao(){
+  let h = buildAbaLikerts('imersao',['im_s1','im_s2'],[]);
+  h += `<h2 class="secao-titulo">4.3 — Emoções (emoti-SAM)</h2>
+  <div class="card">`;
+  const emotis = [
+    {nome:'emoti_valencia', label:'Valência (humor geral):',
+     opts:['😢 Muito triste','😞 Triste','😐 Neutro','😊 Feliz','😄 Muito feliz']},
+    {nome:'emoti_excitacao', label:'Excitação (animação):',
+     opts:['😴 Muito calmo','😌 Calmo','😐 Neutro','😀 Animado','🤩 Muito animado']},
+    {nome:'emoti_dominancia', label:'Dominância (controle):',
+     opts:['😰 Sem controle','😟 Pouco controle','😐 Neutro','😎 No controle','💪 Total controle']},
+  ];
+  emotis.forEach(e => {
+    h += `<div class="emoti-row">
+      <span class="emoti-row-label">${e.label}</span>
+      <div class="emoti-opts">${e.opts.map(o=>`<label><input type="radio" name="${e.nome}" value="${o}"/>${o}</label>`).join('')}</div>
+    </div>`;
+  });
+  h += `<span class="obs-label">Observação sobre emoções:</span>
+    <textarea class="obs-field" name="obs_emocao" rows="2" placeholder="Opcional..."></textarea>
+  </div>`;
+  return h;
+}
+
+function buildAbaModos(){
+  let h = buildAbaLikerts('modos',['mo_s1'],
+    [{nome:'obs_solo', label:'O que poderia melhorar na experiência solo?', rows:2}]);
+  h += buildAbaLikerts('modos2',['mo_s2'],
+    [{nome:'obs_coop', label:'O que poderia melhorar na experiência cooperativa?', rows:2}]);
+  h += buildAbaLikerts('modos3',['mo_s3'],[]);
+  return h;
+}
+
+function buildAbaProg(){
+  let h = buildAbaLikerts('prog',['prog_s1'],[]);
+  h += `<h2 class="secao-titulo">7.2 — Registro de Bugs
+    <span class="secao-resp">Luan Santana · Rodrigo Mota</span></h2>`;
+  for(let i=1;i<=3;i++){
+    h += `<div class="bug-card">
+      <p class="bug-titulo">✕ BUG #${i}</p>
+      <div class="bug-campo">
+        <label>Título:</label><input type="text" name="bug${i}_titulo"/>
+        <label>Fase / Local:</label><input type="text" name="bug${i}_local"/>
+        <label>Passos:</label><textarea name="bug${i}_passos" rows="2"></textarea>
+        <label>Esperado × Ocorrido:</label><textarea name="bug${i}_resultado" rows="2"></textarea>
+      </div>
+      <div class="sev-grupo">
+        ${['Crash','Bloqueio','Maior','Menor','Cosmético'].map(s=>`<label><input type="radio" name="bug${i}_sev" value="${s}"/><span>${s}</span></label>`).join('')}
+      </div>
+    </div>`;
+  }
+  return h;
+}
+
+function buildAbaGeral(){
+  let h = buildAbaLikerts('geral',[], [{}, {}, {}]);
+  // likert impressão final
+  const impressao = [
+    'Enigma Púrpura tem potencial real de entrega ao público-alvo (12+ anos).',
+    'Recomendaria este jogo a pessoas interessadas em história do Brasil.',
+    'A temática (abolicionismo, Luís Gama) foi abordada com respeito e inteligência.',
+    'O jogo me motivou a querer completá-lo até o final.',
+    'A experiência geral foi satisfatória considerando que é uma build alpha.',
+  ];
+  h = `<h2 class="secao-titulo">11.1 — Impressão Final</h2>`;
+  impressao.forEach((p,i) => { h += buildCardLikert(`geral_im_${i+1}`, p, i+1); });
+
+  h += `<h2 class="secao-titulo">11.2 — Nota por Área</h2>
+  <div class="notas-grid">`;
+  AREAS_NOTA.forEach(a => {
+    h += `<div class="nota-row${a.destaque?' destaque':''}">
+      <span class="nota-row-label">${a.l}</span>
+      <div class="stars">
+        ${[5,4,3,2,1].map(v=>`<input type="radio" name="${a.k}" value="${v}" id="${a.k}_${v}"/>
+          <label for="${a.k}_${v}" title="${v}/5">★</label>`).join('')}
+      </div>
+    </div>`;
+  });
+  h += `</div>
+  <h2 class="secao-titulo">11.3 — Comentários Finais</h2>
+  <div class="card">
+    <p class="card-label">O que mais gostou no jogo e por quê:</p>
+    <textarea class="campo-texto" name="gostou" rows="3" placeholder="Sua resposta..."></textarea>
+  </div>
+  <div class="card">
+    <p class="card-label">O que menos gostou e por quê:</p>
+    <textarea class="campo-texto" name="nao_gostou" rows="3" placeholder="Sua resposta..."></textarea>
+  </div>
+  <div class="card">
+    <p class="card-label">Principais sugestões de melhoria para a equipe:</p>
+    <textarea class="campo-texto" name="sugestoes" rows="4" placeholder="Sua resposta..."></textarea>
+  </div>
+  <button class="btn-enviar" onclick="abrirModalEnviar()">✦ Enviar Avaliação & Gerar PDF ✦</button>`;
+  return h;
+}
+
+// ══════════════════════════════════════════════════════════════
+// NAVEGAÇÃO DE ABAS
+// ══════════════════════════════════════════════════════════════
+function irAba(id){
+  abaAtiva = id;
+  document.querySelectorAll('.aba-conteudo').forEach(el=>el.classList.remove('ativa'));
+  document.querySelectorAll('.aba-btn').forEach(el=>el.classList.remove('ativa'));
+  const cont = document.getElementById(`aba-${id}`);
+  const btn  = document.getElementById(`aba-btn-${id}`);
+  if(cont) cont.classList.add('ativa');
+  if(btn)  btn.classList.add('ativa');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ══════════════════════════════════════════════════════════════
+// PROGRESSO
+// ══════════════════════════════════════════════════════════════
+function updateProgress(){
+  // conta radio groups respondidos por aba
+  const grupos = {};
+  const gruposPorAba = {};
+
+  document.querySelectorAll('input[type=radio]').forEach(r => {
+    if(!grupos[r.name]) grupos[r.name] = false;
+    if(r.checked) grupos[r.name] = true;
+
+    // descobrir aba
+    const abaEl = r.closest('.aba-conteudo');
+    if(abaEl){
+      const abaId = abaEl.id.replace('aba-','');
+      if(!gruposPorAba[abaId]) gruposPorAba[abaId] = {t:new Set(),f:new Set()};
+      gruposPorAba[abaId].t.add(r.name);
+      if(r.checked) gruposPorAba[abaId].f.add(r.name);
+    }
+  });
+
+  const total  = Object.keys(grupos).length;
+  const feitos = Object.values(grupos).filter(Boolean).length;
+  const pct    = total ? Math.round((feitos/total)*100) : 0;
+
+  document.getElementById('progFill').style.width = pct+'%';
+  document.getElementById('progTxt').textContent  = `${pct}% · ${feitos}/${total} perguntas`;
+
+  // atualiza badges das abas
+  Object.entries(gruposPorAba).forEach(([abaId,{t,f}]) => {
+    const badge = document.getElementById(`aba-prog-${abaId}`);
+    const btn   = document.getElementById(`aba-btn-${abaId}`);
+    if(!badge) return;
+    badge.textContent = `${f.size}/${t.size}`;
+    if(btn) btn.classList.toggle('completa', f.size===t.size && t.size>0);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODAIS
+// ══════════════════════════════════════════════════════════════
+function abrirModalEnviar(){ document.getElementById('modalEnviar').classList.add('ativo'); }
+function abrirModalSair(){   document.getElementById('modalSair').classList.add('ativo'); }
+function fecharModal(id){    document.getElementById(id).classList.remove('ativo'); }
+
+// ══════════════════════════════════════════════════════════════
+// ENVIO + PDF
+// ══════════════════════════════════════════════════════════════
+async function enviarRespostas(){
+  fecharModal('modalEnviar');
+  salvarLocal();
+
+  // 1. Gera PDF
+  try { gerarPDF(); } catch(e){ console.error('PDF error:',e); }
+
+  // 2. Envia ao Google Sheets
+  if(SHEETS_URL && SHEETS_URL !== 'SUA_URL_DO_APPS_SCRIPT_AQUI'){
+    try {
+      const payload = { tester: testerAtual, timestamp: new Date().toISOString(), ...respostas };
+      await fetch(SHEETS_URL, {
+        method:'POST',
+        mode:'no-cors',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+    } catch(e){ console.warn('Sheets:', e); }
+  }
+
+  document.getElementById('modalSucessoTxt').textContent =
+    SHEETS_URL !== 'SUA_URL_DO_APPS_SCRIPT_AQUI'
+      ? 'Seu PDF foi baixado e as respostas foram enviadas para a planilha da equipe.'
+      : 'Seu PDF foi baixado. (Configure o SHEETS_URL no código para enviar ao Google Sheets.)';
+  document.getElementById('modalSucesso').classList.add('ativo');
+}
+
+// ══════════════════════════════════════════════════════════════
+// GERAÇÃO DE PDF
+// ══════════════════════════════════════════════════════════════
+function gerarPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+
+  const ROXO  = [74, 26, 122];
+  const OURO  = [201, 168, 76];
+  const BG    = [15, 5, 32];
+  const BRANCO= [240, 235, 248];
+  const CINZA = [168, 155, 194];
+  const TEXTO = [212, 200, 232];
+  const W = 210; const H = 297;
+  const ML = 15; const MR = 15; const TW = W - ML - MR;
+  let y = 0; let pag = 1;
+
+  function novaPagina(){
+    doc.addPage();
+    pag++;
+    y = 15;
+    rodape();
+  }
+
+  function checarY(needed=10){
+    if(y + needed > H - 15) novaPagina();
+  }
+
+  function rodape(){
+    doc.setFillColor(...BG);
+    doc.rect(0, H-10, W, 10, 'F');
+    doc.setFontSize(7);
+    doc.setTextColor(...CINZA);
+    doc.text(`Enigma Púrpura — Avaliação Alpha 2026 — Tester: ${testerAtual} — Pág. ${pag}`,
+      W/2, H-4, {align:'center'});
+  }
+
+  // ── CAPA ──
+  doc.setFillColor(...BG);
+  doc.rect(0,0,W,H,'F');
+  // faixa lateral
+  doc.setFillColor(...ROXO);
+  doc.rect(0,0,4,H,'F');
+  // faixa ouro
+  doc.setFillColor(...OURO);
+  doc.rect(0,0,1.5,H,'F');
+
+  // título
+  doc.setFontSize(28);
+  doc.setTextColor(...BRANCO);
+  doc.setFont('helvetica','bold');
+  doc.text('ENIGMA PÚRPURA', W/2, 80, {align:'center'});
+
+  doc.setFontSize(12);
+  doc.setTextColor(...OURO);
+  doc.setFont('helvetica','normal');
+  doc.text('AVALIAÇÃO ALPHA INTERNA · 2026', W/2, 92, {align:'center'});
+
+  // linha
+  doc.setDrawColor(...OURO);
+  doc.setLineWidth(0.5);
+  doc.line(ML, 100, W-MR, 100);
+
+  doc.setFontSize(11);
+  doc.setTextColor(...TEXTO);
+  doc.text(`Avaliador: ${testerAtual}`, W/2, 112, {align:'center'});
+  doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, W/2, 120, {align:'center'});
+
+  // info do tester
+  const infoFields = [
+    ['Idade', respostas.idade||'—'],
+    ['Gênero', respostas.genero||'—'],
+    ['Dispositivo', respostas.dispositivo||'—'],
+    ['Jogos', respostas.jogos||'—'],
+    ['Sessão Solo (min)', respostas.dur_solo||'—'],
+    ['Sessão Coop (min)', respostas.dur_coop||'—'],
+  ];
+
+  doc.setFontSize(10);
+  let iy = 135;
+  infoFields.forEach(([k,v]) => {
+    doc.setTextColor(...CINZA);
+    doc.setFont('helvetica','bold');
+    doc.text(k+':', ML+10, iy);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(...TEXTO);
+    doc.text(String(v), ML+55, iy);
+    iy += 8;
+  });
+
+  rodape();
+
+  // ── PÁGINAS DE RESPOSTAS ──
+  novaPagina();
+
+  function secHeader(titulo, subtitulo=''){
+    checarY(18);
+    doc.setFillColor(...ROXO);
+    doc.rect(ML, y, TW, 9, 'F');
+    doc.setFontSize(10);
+    doc.setTextColor(...BRANCO);
+    doc.setFont('helvetica','bold');
+    doc.text(titulo, ML+3, y+6);
+    if(subtitulo){
+      doc.setFontSize(7);
+      doc.setTextColor(...OURO);
+      doc.text(subtitulo, W-MR-3, y+6, {align:'right'});
+    }
+    y += 12;
+  }
+
+  function subHeader(titulo){
+    checarY(12);
+    doc.setFontSize(9);
+    doc.setTextColor(...OURO);
+    doc.setFont('helvetica','bold');
+    doc.text(titulo, ML, y);
+    y += 6;
+    doc.setDrawColor(...ROXO);
+    doc.setLineWidth(0.3);
+    doc.line(ML, y, W-MR, y);
+    y += 4;
+  }
+
+  function pergunta(texto, resposta, obs=''){
+    const linhas = doc.splitTextToSize('• '+texto, TW-20);
+    checarY(linhas.length * 5 + 14);
+
+    // fundo card
+    const cardH = linhas.length*5 + (obs?16:10);
+    doc.setFillColor(34, 14, 58);
+    doc.roundedRect(ML, y, TW, cardH, 2, 2, 'F');
+    doc.setDrawColor(...ROXO);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(ML, y, TW, cardH, 2, 2, 'S');
+
+    // texto
+    doc.setFontSize(8.5);
+    doc.setTextColor(...TEXTO);
+    doc.setFont('helvetica','normal');
+    doc.text(linhas, ML+3, y+5);
+
+    // resposta
+    const ry = y + linhas.length*5 + 2;
+    if(resposta && resposta !== ''){
+      doc.setFontSize(9);
+      doc.setTextColor(...OURO);
+      doc.setFont('helvetica','bold');
+      doc.text('Nota: '+resposta, ML+3, ry);
+    } else {
+      doc.setFontSize(8);
+      doc.setTextColor(...CINZA);
+      doc.setFont('helvetica','italic');
+      doc.text('Não respondida', ML+3, ry);
+    }
+
+    // obs
+    if(obs){
+      doc.setFontSize(7.5);
+      doc.setTextColor(...CINZA);
+      doc.setFont('helvetica','italic');
+      const obsLinhas = doc.splitTextToSize('Obs: '+obs, TW-6);
+      doc.text(obsLinhas, ML+3, ry+6);
+      y += cardH + 3;
+    } else {
+      y += cardH + 3;
+    }
+  }
+
+  function textoAberto(label, valor){
+    if(!valor) return;
+    checarY(20);
+    doc.setFontSize(8.5);
+    doc.setTextColor(...CINZA);
+    doc.setFont('helvetica','bold');
+    doc.text(label, ML, y);
+    y += 5;
+    doc.setTextColor(...TEXTO);
+    doc.setFont('helvetica','normal');
+    const linhas = doc.splitTextToSize(valor, TW);
+    doc.text(linhas, ML, y);
+    y += linhas.length*5 + 4;
+  }
+
+  function likertLabel(v){
+    const map = {'1':'1 — Discordo Totalmente','2':'2 — Discordo',
+      '3':'3 — Neutro','4':'4 — Concordo','5':'5 — Concordo Totalmente'};
+    return map[v] || v || '—';
+  }
+
+  // ── renderiza todas as seções ──
+  const secoes = [
+    { titulo:'SEÇÃO 1 — GDD (Documentação)', sub:'Game Design',
+      grupos:['gdd_s1','gdd_s2','gdd_s3'],
+      abertos:[['gdd_falta','Falta no GDD:'],['gdd_detalhe','Seção para detalhar:']] },
+    { titulo:'SEÇÃO 2 — Onboarding & Controles', sub:'',
+      grupos:['on_s1','on_s2'],
+      yns:[
+        {k:'yn_pista10min', t:'Alcancei a primeira pista em menos de 10 minutos?'},
+        {k:'yn_mecanica',   t:'Entendi a diferença mecânica entre Luís e Ângela?'},
+        {k:'yn_cutscene',   t:'A cutscene inicial foi clara sem precisar assistir duas vezes?'},
+      ],
+      abertos:[['obs_onboarding','Observação:']] },
+    { titulo:'SEÇÃO 3 — Desafio & Progressão', sub:'GameFlow',
+      grupos:['des_s1','des_s2','des_s3'],
+      abertos:[['travado','Momentos de travamento:']] },
+    { titulo:'SEÇÃO 4 — Imersão & Narrativa', sub:'Roteiro · Yuri Rodrigues',
+      grupos:['im_s1','im_s2'],
+      emotis:true,
+      abertos:[['obs_emocao','Observação emocional:']] },
+    { titulo:'SEÇÃO 5 — Modos de Jogo (Solo & Coop)', sub:'',
+      grupos:['mo_s1','mo_s2','mo_s3'],
+      abertos:[['obs_solo','Melhoria solo:'],['obs_coop','Melhoria coop:']] },
+    { titulo:'SEÇÃO 6 — Arte & Visual', sub:'Alice Araujo · Rodrigo Mota',
+      grupos:['art_s1','art_s2'],
+      abertos:[['obs_arte','Feedback arte:']] },
+    { titulo:'SEÇÃO 7 — Programação & Bugs', sub:'Luan Santana · Rodrigo Mota',
+      grupos:['prog_s1'],
+      bugs:true },
+    { titulo:'SEÇÃO 8 — Sound Design & Música', sub:'Yuri Rodrigues',
+      grupos:['som_s1','som_s2'],
+      abertos:[['obs_som','Feedback som:']] },
+    { titulo:'SEÇÃO 9 — UI / UX', sub:'',
+      grupos:['ui_s1','ui_s2'],
+      abertos:[['obs_ui','Feedback UI/UX:']] },
+    { titulo:'SEÇÃO 10 — Game Design & Level Design', sub:'Yuri Rodrigues',
+      grupos:['gd_s1','gd_s2'],
+      abertos:[['obs_gd','Feedback game design:']] },
+    { titulo:'SEÇÃO 11 — Avaliação Geral', sub:'',
+      grupos:[],
+      impressaoFinal:true,
+      notas:true,
+      abertos:[['gostou','O que mais gostou:'],['nao_gostou','O que menos gostou:'],['sugestoes','Sugestões:']] },
+  ];
+
+  secoes.forEach(sec => {
+    secHeader(sec.titulo, sec.sub||'');
+
+    sec.grupos.forEach(sk => {
+      const secP = PERGUNTAS[sk];
+      if(!secP) return;
+      subHeader(secP.titulo);
+      secP.pergs.forEach((p,i) => {
+        const k  = `${sk}_${i+1}`;
+        const v  = respostas[k] || '';
+        const ob = respostas[`${k}_obs`] || '';
+        pergunta(p, likertLabel(v), ob);
+      });
+    });
+
+    if(sec.yns){
+      subHeader('Perguntas Rápidas (Sim/Não/Parcialmente)');
+      sec.yns.forEach(yn => {
+        pergunta(yn.t, respostas[yn.k]||'');
+      });
+    }
+
+    if(sec.emotis){
+      subHeader('Emoções (emoti-SAM)');
+      [
+        {k:'emoti_valencia',   t:'Valência (humor geral):'},
+        {k:'emoti_excitacao',  t:'Excitação (animação):'},
+        {k:'emoti_dominancia', t:'Dominância (controle):'},
+      ].forEach(e => pergunta(e.t, respostas[e.k]||''));
+    }
+
+    if(sec.bugs){
+      subHeader('Registro de Bugs');
+      for(let i=1;i<=3;i++){
+        const t   = respostas[`bug${i}_titulo`]||'';
+        if(!t) continue;
+        const loc = respostas[`bug${i}_local`]||'—';
+        const pas = respostas[`bug${i}_passos`]||'—';
+        const res = respostas[`bug${i}_resultado`]||'—';
+        const sev = respostas[`bug${i}_sev`]||'—';
+        checarY(30);
+        doc.setFillColor(100,10,10,0.3);
+        doc.setDrawColor(180,40,40);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(ML, y, TW, 28, 2, 2, 'FD');
+        doc.setFontSize(8.5);
+        doc.setTextColor(224,112,112);
+        doc.setFont('helvetica','bold');
+        doc.text(`BUG #${i}: ${t}`, ML+3, y+6);
+        doc.setFont('helvetica','normal');
+        doc.setTextColor(...TEXTO);
+        doc.text(`Local: ${loc}`, ML+3, y+12);
+        const pasL = doc.splitTextToSize(`Passos: ${pas}`, TW-6);
+        doc.text(pasL, ML+3, y+18);
+        doc.text(`Severidade: ${sev}`, ML+3, y+24);
+        y += 32;
+      }
+    }
+
+    if(sec.impressaoFinal){
+      subHeader('11.1 — Impressão Final');
+      const imp = [
+        'Enigma Púrpura tem potencial real de entrega ao público-alvo (12+ anos).',
+        'Recomendaria este jogo a pessoas interessadas em história do Brasil.',
+        'A temática (abolicionismo, Luís Gama) foi abordada com respeito e inteligência.',
+        'O jogo me motivou a querer completá-lo até o final.',
+        'A experiência geral foi satisfatória considerando que é uma build alpha.',
+      ];
+      imp.forEach((p,i) => pergunta(p, likertLabel(respostas[`geral_im_${i+1}`]||'')));
+    }
+
+    if(sec.notas){
+      subHeader('11.2 — Notas por Área');
+      checarY(AREAS_NOTA.length * 8 + 4);
+      AREAS_NOTA.forEach(a => {
+        const v = respostas[a.k]||'';
+        const estrelas = v ? '★'.repeat(parseInt(v))+'☆'.repeat(5-parseInt(v)) : '—';
+        doc.setFontSize(9);
+        doc.setTextColor(a.destaque ? OURO[0] : TEXTO[0],
+                         a.destaque ? OURO[1] : TEXTO[1],
+                         a.destaque ? OURO[2] : TEXTO[2]);
+        doc.setFont('helvetica', a.destaque?'bold':'normal');
+        doc.text(a.l, ML, y);
+        doc.setTextColor(...OURO);
+        doc.text(estrelas+' ('+( v||'—')+'/5)', W-MR, y, {align:'right'});
+        y += 7;
+        checarY(8);
+      });
+      y += 4;
+    }
+
+    if(sec.abertos){
+      sec.abertos.forEach(([k,l]) => textoAberto(l, respostas[k]||''));
+    }
+
+    y += 6;
+  });
+
+  // salva
+  doc.save(`EnigmaPurpura_Avaliacao_${testerAtual}_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+initLogin();
+</script>
+</body>
+</html>
