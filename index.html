@@ -303,6 +303,48 @@ body::after{content:'';position:fixed;top:0;left:0;width:3px;height:100%;
   .aba-conteudo{padding:1.2rem 1rem 3rem}
   .emoti-row-label{min-width:100%}
 }
+
+/* ── PAINEL DEV ── */
+.dev-tester-card{
+  background:var(--card2);border:1px solid var(--borda);border-radius:8px;
+  padding:.9rem 1.1rem;margin-bottom:.5rem;
+  display:flex;align-items:center;gap:1rem;
+  transition:border-color .2s}
+.dev-tester-card:hover{border-color:var(--roxo-cl)}
+.dev-tester-card.selecionado{border-color:var(--ouro)}
+
+.dev-check{width:18px;height:18px;accent-color:var(--ouro);cursor:pointer;flex-shrink:0}
+
+.dev-tester-info{flex:1}
+.dev-tester-nome{font-family:'Cinzel',serif;font-size:.88rem;color:var(--branco);font-weight:600}
+.dev-tester-meta{font-size:.75rem;color:var(--cinza);margin-top:.2rem}
+
+.dev-tester-nota{
+  font-family:'Cinzel',serif;font-size:1.1rem;
+  color:var(--ouro);font-weight:700;min-width:50px;text-align:center}
+
+.dev-tester-btns{display:flex;gap:.4rem}
+
+.dev-resumo-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:.6rem;margin-bottom:1rem}
+.dev-resumo-card{
+  background:var(--card2);border:1px solid var(--borda);border-radius:8px;
+  padding:.8rem;text-align:center}
+.dev-resumo-label{font-size:.72rem;color:var(--cinza);margin-bottom:.3rem;
+  letter-spacing:.04em}
+.dev-resumo-val{font-family:'Cinzel',serif;font-size:1.3rem;color:var(--ouro-cl)}
+.dev-resumo-sub{font-size:.7rem;color:var(--cinza);margin-top:.2rem}
+
+.dev-media-row{
+  display:flex;align-items:center;gap:.8rem;margin-bottom:.5rem}
+.dev-media-label{font-size:.82rem;color:var(--texto);min-width:200px}
+.dev-media-bar-bg{flex:1;height:8px;background:var(--borda);border-radius:4px;overflow:hidden}
+.dev-media-bar-fill{height:100%;border-radius:4px;
+  background:linear-gradient(90deg,var(--roxo-mid),var(--ouro));
+  transition:width .6s ease}
+.dev-media-val{font-size:.82rem;color:var(--ouro);min-width:35px;text-align:right;
+  font-family:'Cinzel',serif}
 </style>
 </head>
 <body>
@@ -713,6 +755,14 @@ function initLogin(){
 function entrar(){
   const nome = document.getElementById('inputNome').value.trim();
   if(!nome){ alert('Por favor, informe seu nome.'); return; }
+
+  // bifurcação painel dev
+  if(nome === 'EnigmaPurpura'){
+    document.getElementById('telaLogin').style.display = 'none';
+    abrirPainelDev();
+    return;
+  }
+
   testerAtual = nome;
   respostas   = carregarLocal(nome);
 
@@ -1481,10 +1531,571 @@ function gerarPDF(){
   doc.save(`EnigmaPurpura_Avaliacao_${testerAtual}_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// PAINEL DO DESENVOLVEDOR
+// ══════════════════════════════════════════════════════════════
+
+let devTesterParaDeletar = null;
+
+function abrirPainelDev(){
+  document.getElementById('telaDev').style.display = 'block';
+  renderizarPainelDev();
+}
+
+function voltarLoginDev(){
+  document.getElementById('telaDev').style.display = 'none';
+  document.getElementById('telaLogin').style.display = 'flex';
+  document.getElementById('inputNome').value = '';
+}
+
+function renderizarPainelDev(){
+  const testers = listarTesters();
+  const lista   = document.getElementById('devTesterLista');
+  lista.innerHTML = '';
+
+  if(testers.length === 0){
+    lista.innerHTML = '<p style="color:var(--cinza);font-style:italic;text-align:center;padding:2rem">Nenhum avaliador encontrou dados salvos ainda.</p>';
+    return;
+  }
+
+  testers.forEach(t => {
+    const dados = carregarLocal(t);
+    const notaGeral = dados['n_geral'] || '—';
+    const totalResp = Object.keys(dados).filter(k => !k.endsWith('_obs') && dados[k]).length;
+    const dataSalvo = dados['timestamp_ultimo'] || '';
+
+    const card = document.createElement('div');
+    card.className = 'dev-tester-card';
+    card.id = `dev-card-${t}`;
+    card.innerHTML = `
+      <input type="checkbox" class="dev-check" id="chk-${t}" checked
+        onchange="document.getElementById('dev-card-${t}').classList.toggle('selecionado', this.checked);atualizarResumo()"/>
+      <div class="dev-tester-info">
+        <div class="dev-tester-nome">${t}</div>
+        <div class="dev-tester-meta">${totalResp} campos preenchidos${dataSalvo ? ' · '+new Date(dataSalvo).toLocaleDateString('pt-BR') : ''}</div>
+      </div>
+      <div class="dev-tester-nota">${notaGeral !== '—' ? notaGeral+'/5' : '—'}</div>
+      <div class="dev-tester-btns">
+        <button class="btn-sm danger" onclick="pedirDeletar('${t}')">Deletar</button>
+      </div>`;
+    card.classList.add('selecionado');
+    lista.appendChild(card);
+  });
+
+  atualizarResumo();
+}
+
+function selecionarTodosDev(sel){
+  listarTesters().forEach(t => {
+    const chk  = document.getElementById(`chk-${t}`);
+    const card = document.getElementById(`dev-card-${t}`);
+    if(chk)  chk.checked = sel;
+    if(card) card.classList.toggle('selecionado', sel);
+  });
+  atualizarResumo();
+}
+
+function testersSelecionados(){
+  return listarTesters().filter(t => {
+    const chk = document.getElementById(`chk-${t}`);
+    return chk && chk.checked;
+  });
+}
+
+function atualizarResumo(){
+  const selecionados = testersSelecionados();
+  const resumoEl = document.getElementById('devResumo');
+  if(selecionados.length === 0){
+    resumoEl.innerHTML = '';
+    return;
+  }
+
+  // calcular médias por área
+  const dadosTodos = selecionados.map(t => carregarLocal(t));
+
+  function media(campo){
+    const vals = dadosTodos.map(d => parseFloat(d[campo]||0)).filter(v => v > 0);
+    if(!vals.length) return null;
+    return (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+  }
+
+  // média por seção
+  const secoes = {
+    'GDD':        ['gdd_s1','gdd_s2','gdd_s3'],
+    'Onboarding': ['on_s1','on_s2'],
+    'Desafio':    ['des_s1','des_s2','des_s3'],
+    'Imersão':    ['im_s1','im_s2'],
+    'Modos':      ['mo_s1','mo_s2','mo_s3'],
+    'Arte':       ['art_s1','art_s2'],
+    'Programação':['prog_s1'],
+    'Sound':      ['som_s1','som_s2'],
+    'UI/UX':      ['ui_s1','ui_s2'],
+    'Game Design':['gd_s1','gd_s2'],
+  };
+
+  // médias das notas gerais por área
+  const areasMedia = AREAS_NOTA.map(a => ({
+    label: a.l,
+    media: media(a.k)
+  }));
+
+  const notaGeralMedia = media('n_geral');
+
+  let html = `
+  <div style="margin-bottom:1.2rem">
+    <p style="font-family:'Cinzel',serif;font-size:.78rem;color:var(--ouro-cl);letter-spacing:.08em;margin-bottom:.8rem">
+      RESUMO — ${selecionados.length} AVALIADOR${selecionados.length>1?'ES':''} SELECIONADO${selecionados.length>1?'S':''}
+    </p>
+    <div class="dev-resumo-grid">
+      <div class="dev-resumo-card">
+        <div class="dev-resumo-label">AVALIADORES</div>
+        <div class="dev-resumo-val">${selecionados.length}</div>
+      </div>
+      <div class="dev-resumo-card">
+        <div class="dev-resumo-label">NOTA GERAL MÉDIA</div>
+        <div class="dev-resumo-val">${notaGeralMedia||'—'}</div>
+        <div class="dev-resumo-sub">de 5</div>
+      </div>
+      ${areasMedia.filter(a=>a.media).slice(0,2).map(a=>`
+      <div class="dev-resumo-card">
+        <div class="dev-resumo-label">${a.label.toUpperCase()}</div>
+        <div class="dev-resumo-val">${a.media}</div>
+        <div class="dev-resumo-sub">de 5</div>
+      </div>`).join('')}
+    </div>
+  </div>
+  <div style="background:var(--card2);border:1px solid var(--borda);border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem">
+    <p style="font-family:'Cinzel',serif;font-size:.78rem;color:var(--ouro-cl);letter-spacing:.08em;margin-bottom:.8rem">MÉDIAS POR ÁREA</p>
+    ${areasMedia.map(a => {
+      const v = parseFloat(a.media||0);
+      const pct = (v/5*100).toFixed(0);
+      return `<div class="dev-media-row">
+        <span class="dev-media-label">${a.label}</span>
+        <div class="dev-media-bar-bg"><div class="dev-media-bar-fill" style="width:${pct}%"></div></div>
+        <span class="dev-media-val">${a.media||'—'}</span>
+      </div>`;
+    }).join('')}
+  </div>`;
+
+  resumoEl.innerHTML = html;
+}
+
+// ── DELETAR ──
+function pedirDeletar(nome){
+  devTesterParaDeletar = nome;
+  document.getElementById('modalDeletarTxt').textContent =
+    `Tem certeza que deseja deletar todos os dados de "${nome}"? Esta ação não pode ser desfeita.`;
+  document.getElementById('modalDeletar').classList.add('ativo');
+}
+
+function confirmarDeletar(){
+  if(!devTesterParaDeletar) return;
+  localStorage.removeItem(chaveLS(devTesterParaDeletar));
+  devTesterParaDeletar = null;
+  fecharModal('modalDeletar');
+  renderizarPainelDev();
+}
+
+// ══════════════════════════════════════════════════════════════
+// PDF CONSOLIDADO DO DESENVOLVEDOR
+// ══════════════════════════════════════════════════════════════
+function gerarPDFDev(){
+  const selecionados = testersSelecionados();
+  if(selecionados.length === 0){
+    alert('Selecione pelo menos um avaliador.');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+
+  const ROXO  = [74, 26, 122];
+  const OURO  = [201, 168, 76];
+  const BG    = [15, 5, 32];
+  const BRANCO= [240, 235, 248];
+  const CINZA = [168, 155, 194];
+  const TEXTO = [212, 200, 232];
+  const VERDE = [46, 204, 113];
+  const W=210; const H=297;
+  const ML=15; const MR=15; const TW=W-ML-MR;
+  let y=0; let pag=1;
+
+  const dadosTodos = selecionados.map(t => ({ nome: t, ...carregarLocal(t) }));
+
+  function novaPag(){
+    doc.addPage(); pag++;
+    doc.setFillColor(...BG); doc.rect(0,0,W,H,'F');
+    doc.setFillColor(...ROXO); doc.rect(0,0,4,H,'F');
+    doc.setFillColor(...OURO); doc.rect(0,0,1.5,H,'F');
+    y=15; rodape();
+  }
+
+  function checarY(n=10){ if(y+n>H-15) novaPag(); }
+
+  function rodape(){
+    doc.setFillColor(10,3,22); doc.rect(0,H-10,W,10,'F');
+    doc.setDrawColor(...ROXO); doc.setLineWidth(0.3); doc.line(ML,H-10,W-MR,H-10);
+    doc.setFontSize(7); doc.setTextColor(...CINZA);
+    doc.text('Enigma Purpura — Relatorio Dev — '+selecionados.length+' avaliadores — Pag. '+pag, W/2,H-4,{align:'center'});
+  }
+
+  function secHeader(titulo){
+    checarY(16);
+    doc.setFillColor(...OURO); doc.rect(ML,y,2,10,'F');
+    doc.setFillColor(...ROXO); doc.rect(ML+2,y,TW-2,10,'F');
+    doc.setFontSize(10); doc.setTextColor(...BRANCO); doc.setFont('helvetica','bold');
+    doc.text(titulo, ML+6, y+7);
+    y+=14;
+  }
+
+  function subHeader(titulo){
+    checarY(10);
+    doc.setFontSize(9); doc.setTextColor(...OURO); doc.setFont('helvetica','bold');
+    doc.text(titulo, ML, y); y+=5;
+    doc.setDrawColor(...ROXO); doc.setLineWidth(0.3); doc.line(ML,y,W-MR,y); y+=4;
+  }
+
+  function media(campo){
+    const vals = dadosTodos.map(d=>parseFloat(d[campo]||0)).filter(v=>v>0);
+    if(!vals.length) return null;
+    return (vals.reduce((a,b)=>a+b,0)/vals.length);
+  }
+
+  // ── CAPA ──
+  doc.setFillColor(...BG); doc.rect(0,0,W,H,'F');
+  doc.setFillColor(...ROXO); doc.rect(0,0,4,H,'F');
+  doc.setFillColor(...OURO); doc.rect(0,0,1.5,H,'F');
+
+  doc.setFontSize(26); doc.setTextColor(...BRANCO); doc.setFont('helvetica','bold');
+  doc.text('ENIGMA PURPURA', W/2, 70, {align:'center'});
+  doc.setFontSize(11); doc.setTextColor(...OURO); doc.setFont('helvetica','normal');
+  doc.text('RELATORIO CONSOLIDADO DO DESENVOLVEDOR', W/2, 82, {align:'center'});
+
+  doc.setDrawColor(...OURO); doc.setLineWidth(0.5);
+  doc.line(ML,90,W-MR,90);
+
+  doc.setFontSize(10); doc.setTextColor(...TEXTO);
+  doc.text('Data: '+new Date().toLocaleDateString('pt-BR'), W/2, 100, {align:'center'});
+  doc.text('Avaliadores incluidos: '+selecionados.length, W/2, 110, {align:'center'});
+
+  // lista de testers na capa
+  let ty = 125;
+  selecionados.forEach((t,i) => {
+    const d = dadosTodos.find(x=>x.nome===t);
+    const nota = d['n_geral']||'—';
+    doc.setFontSize(9);
+    doc.setTextColor(...CINZA); doc.setFont('helvetica','normal');
+    doc.text((i+1)+'. '+t, ML+10, ty);
+    doc.setTextColor(...OURO);
+    doc.text('Nota geral: '+nota+'/5', W-MR-5, ty, {align:'right'});
+    ty+=8;
+  });
+
+  rodape();
+
+  // ── PÁG 2: TABELA COMPARATIVA DE NOTAS ──
+  novaPag();
+  secHeader('TABELA COMPARATIVA — NOTAS POR AREA');
+
+  // cabeçalho da tabela
+  const colW = Math.min(30, (TW-60) / selecionados.length);
+  const col0 = TW - (colW * selecionados.length);
+
+  // header linha
+  doc.setFillColor(...ROXO);
+  doc.rect(ML, y, TW, 8, 'F');
+  doc.setFontSize(7.5); doc.setTextColor(...OURO); doc.setFont('helvetica','bold');
+  doc.text('Area', ML+2, y+5.5);
+  selecionados.forEach((t,i) => {
+    const nome = t.length>10 ? t.substring(0,10)+'.' : t;
+    doc.text(nome, ML+col0+(i*colW)+colW/2, y+5.5, {align:'center'});
+  });
+  doc.text('Media', ML+TW-2, y+5.5, {align:'right'});
+  y+=10;
+
+  AREAS_NOTA.forEach((a,ri) => {
+    checarY(9);
+    const bg = ri%2===0 ? [26,10,46] : [34,14,58];
+    doc.setFillColor(...bg);
+    doc.rect(ML,y,TW,8,'F');
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', a.destaque?'bold':'normal');
+    doc.setTextColor(a.destaque ? OURO[0] : TEXTO[0],
+                     a.destaque ? OURO[1] : TEXTO[1],
+                     a.destaque ? OURO[2] : TEXTO[2]);
+
+    const labelTxt = a.l.length>28 ? a.l.substring(0,28)+'.' : a.l;
+    doc.text(labelTxt, ML+2, y+5.5);
+
+    selecionados.forEach((t,i) => {
+      const d = dadosTodos.find(x=>x.nome===t);
+      const v = d[a.k]||'—';
+      doc.setTextColor(...(v==='—'?CINZA:OURO));
+      doc.text(String(v), ML+col0+(i*colW)+colW/2, y+5.5, {align:'center'});
+    });
+
+    const med = media(a.k);
+    doc.setTextColor(...VERDE);
+    doc.setFont('helvetica','bold');
+    doc.text(med ? med.toFixed(1) : '—', ML+TW-2, y+5.5, {align:'right'});
+    y+=8;
+  });
+
+  y+=8;
+
+  // ── GRÁFICO DE BARRAS — MÉDIAS POR ÁREA ──
+  novaPag();
+  secHeader('GRAFICO — MEDIAS POR AREA (nota de 1 a 5)');
+
+  const barH    = 8;
+  const barGap  = 3;
+  const labelW  = 60;
+  const barMaxW = TW - labelW - 20;
+
+  AREAS_NOTA.forEach(a => {
+    checarY(barH + barGap + 2);
+    const med = media(a.k);
+    const pct  = med ? med/5 : 0;
+    const bW   = barMaxW * pct;
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', a.destaque?'bold':'normal');
+    doc.setTextColor(a.destaque?OURO[0]:TEXTO[0], a.destaque?OURO[1]:TEXTO[1], a.destaque?OURO[2]:TEXTO[2]);
+    const lbl = a.l.length>22 ? a.l.substring(0,22)+'.' : a.l;
+    doc.text(lbl, ML, y+barH/2+2);
+
+    // barra fundo
+    doc.setFillColor(50,20,80);
+    doc.roundedRect(ML+labelW, y, barMaxW, barH, 1,1,'F');
+
+    // barra preenchida
+    if(bW > 0){
+      // gradiente simulado com 2 retângulos
+      doc.setFillColor(...ROXO);
+      doc.roundedRect(ML+labelW, y, bW*0.6, barH, 1,1,'F');
+      doc.setFillColor(...OURO);
+      doc.roundedRect(ML+labelW+bW*0.6, y, bW*0.4, barH, 1,1,'F');
+      doc.setFillColor(...ROXO);
+      doc.roundedRect(ML+labelW, y, bW, barH, 1,1,'F');
+      // sobrescreve com gradiente
+      for(let xi=0; xi<bW; xi+=1){
+        const ratio = xi/bW;
+        const r = Math.round(ROXO[0]+(OURO[0]-ROXO[0])*ratio);
+        const g = Math.round(ROXO[1]+(OURO[1]-ROXO[1])*ratio);
+        const b2= Math.round(ROXO[2]+(OURO[2]-ROXO[2])*ratio);
+        doc.setFillColor(r,g,b2);
+        doc.rect(ML+labelW+xi, y, 1, barH, 'F');
+      }
+    }
+
+    // valor
+    doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    doc.setTextColor(...OURO);
+    doc.text(med ? med.toFixed(1)+'/5' : '—', ML+labelW+barMaxW+3, y+barH/2+2);
+
+    y += barH + barGap;
+  });
+
+  y += 8;
+
+  // ── MÉDIAS POR SEÇÃO ──
+  secHeader('MEDIAS POR SECAO (perguntas Likert 1-5)');
+
+  const SECOES_DEF = {
+    'GDD (Documentação)':    {grupos:['gdd_s1','gdd_s2','gdd_s3']},
+    'Onboarding/Controles':  {grupos:['on_s1','on_s2']},
+    'Desafio & Progressão':  {grupos:['des_s1','des_s2','des_s3']},
+    'Imersão & Narrativa':   {grupos:['im_s1','im_s2']},
+    'Modo Solo':             {grupos:['mo_s1']},
+    'Modo Cooperativo':      {grupos:['mo_s2','mo_s3']},
+    'Arte & Visual':         {grupos:['art_s1','art_s2']},
+    'Programação':           {grupos:['prog_s1']},
+    'Sound Design':          {grupos:['som_s1','som_s2']},
+    'UI / UX':               {grupos:['ui_s1','ui_s2']},
+    'Game Design':           {grupos:['gd_s1','gd_s2']},
+    'Impressão Final':       {grupos:['geral_im']},
+  };
+
+  Object.entries(SECOES_DEF).forEach(([nome, {grupos}]) => {
+    checarY(10);
+    // calcula média de todas as perguntas dessa seção para todos os testers
+    const vals = [];
+    dadosTodos.forEach(d => {
+      grupos.forEach(sk => {
+        const sec = PERGUNTAS[sk];
+        if(!sec) return;
+        sec.pergs.forEach((_,i) => {
+          const v = parseFloat(d[`${sk}_${i+1}`]||0);
+          if(v>0) vals.push(v);
+        });
+      });
+    });
+    const med = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length) : null;
+    const pct = med ? (med/5*100).toFixed(0) : 0;
+
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    doc.setTextColor(...TEXTO);
+    doc.text(nome, ML, y+4);
+
+    const bx = ML+65; const bw2 = TW-85;
+    doc.setFillColor(50,20,80); doc.roundedRect(bx,y,bw2,6,1,1,'F');
+    if(med){
+      const fw = bw2*(med/5);
+      for(let xi=0;xi<fw;xi+=1){
+        const ratio=xi/fw;
+        const r=Math.round(ROXO[0]+(OURO[0]-ROXO[0])*ratio);
+        const g=Math.round(ROXO[1]+(OURO[1]-ROXO[1])*ratio);
+        const b2=Math.round(ROXO[2]+(OURO[2]-ROXO[2])*ratio);
+        doc.setFillColor(r,g,b2); doc.rect(bx+xi,y,1,6,'F');
+      }
+    }
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(...OURO);
+    doc.text(med?med.toFixed(2)+'/5':'—', W-MR, y+4.5, {align:'right'});
+    y+=10; checarY(10);
+  });
+
+  // ── BUGS REPORTADOS ──
+  novaPag();
+  secHeader('BUGS REPORTADOS — TODOS OS AVALIADORES');
+
+  let temBug = false;
+  dadosTodos.forEach(d => {
+    for(let i=1;i<=3;i++){
+      const t = d[`bug${i}_titulo`];
+      if(!t||!t.trim()) continue;
+      temBug = true;
+      checarY(32);
+
+      doc.setFillColor(80,10,10);
+      doc.roundedRect(ML, y, TW, 30, 2,2,'F');
+      doc.setDrawColor(180,40,40); doc.setLineWidth(0.3);
+      doc.roundedRect(ML, y, TW, 30, 2,2,'S');
+
+      doc.setFontSize(8); doc.setFont('helvetica','bold');
+      doc.setTextColor(224,112,112);
+      doc.text('BUG #'+i+' — '+d.nome, ML+3, y+6);
+
+      doc.setFont('helvetica','normal'); doc.setTextColor(...TEXTO);
+      const tituloL = doc.splitTextToSize('Titulo: '+(t||'—'), TW-8);
+      doc.text(tituloL, ML+3, y+12);
+
+      const localL = doc.splitTextToSize('Local: '+(d[`bug${i}_local`]||'—'), TW-8);
+      doc.text(localL, ML+3, y+18);
+
+      const sevTxt = 'Severidade: '+(d[`bug${i}_sev`]||'—');
+      doc.setTextColor(...OURO); doc.setFont('helvetica','bold');
+      doc.text(sevTxt, ML+3, y+25);
+
+      y += 34;
+    }
+  });
+
+  if(!temBug){
+    doc.setFontSize(9); doc.setTextColor(...CINZA); doc.setFont('helvetica','italic');
+    doc.text('Nenhum bug reportado pelos avaliadores selecionados.', ML, y);
+    y+=10;
+  }
+
+  // ── RESPOSTAS ABERTAS ──
+  novaPag();
+  secHeader('RESPOSTAS ABERTAS — COMENTARIOS DOS AVALIADORES');
+
+  const camposAbertos = [
+    {k:'gdd_falta',     l:'GDD — O que falta ou está incompleto:'},
+    {k:'gdd_detalhe',   l:'GDD — Seção para detalhar:'},
+    {k:'travado',       l:'Momentos de travamento:'},
+    {k:'obs_onboarding',l:'Observação sobre onboarding:'},
+    {k:'obs_solo',      l:'Melhoria modo solo:'},
+    {k:'obs_coop',      l:'Melhoria modo cooperativo:'},
+    {k:'obs_arte',      l:'Feedback arte:'},
+    {k:'obs_som',       l:'Feedback sound design:'},
+    {k:'obs_ui',        l:'Feedback UI/UX:'},
+    {k:'obs_gd',        l:'Feedback game design:'},
+    {k:'gostou',        l:'O que mais gostou:'},
+    {k:'nao_gostou',    l:'O que menos gostou:'},
+    {k:'sugestoes',     l:'Sugestoes de melhoria:'},
+  ];
+
+  camposAbertos.forEach(({k,l}) => {
+    const resps = dadosTodos.filter(d => d[k]&&d[k].trim());
+    if(!resps.length) return;
+
+    subHeader(l);
+    resps.forEach(d => {
+      const linhas = doc.splitTextToSize(d.nome+': '+d[k], TW-4);
+      checarY(linhas.length*5+6);
+      doc.setFillColor(26,10,46);
+      doc.roundedRect(ML,y,TW,linhas.length*5+6,2,2,'F');
+      doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(...TEXTO);
+      doc.text(linhas, ML+3, y+5);
+      y+=linhas.length*5+9;
+    });
+    y+=3;
+  });
+
+  doc.save('EnigmaPurpura_RelatorioDevConsolidado_'+new Date().toISOString().slice(0,10)+'.pdf');
+}
+
 // ══════════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════════
 initLogin();
 </script>
+<!-- ══════════════════════ PAINEL DO DESENVOLVEDOR ══════════════════════ -->
+<div id="telaDev" style="display:none;min-height:100vh;position:relative;z-index:1">
+
+  <!-- topbar dev -->
+  <div class="topbar">
+    <span class="topbar-logo">👁 ENIGMA PÚRPURA</span>
+    <span class="topbar-tester" style="color:var(--ouro-cl);font-weight:bold">⚙ PAINEL DO DESENVOLVEDOR</span>
+    <div class="topbar-btns" style="margin-left:auto">
+      <button class="btn-sm" onclick="gerarPDFDev()">✦ Gerar PDF Consolidado</button>
+      <button class="btn-sm danger" onclick="voltarLoginDev()">Sair</button>
+    </div>
+  </div>
+
+  <div style="max-width:900px;margin:0 auto;padding:2rem 1.5rem 4rem;position:relative;z-index:1">
+
+    <!-- header -->
+    <div style="text-align:center;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid var(--borda)">
+      <p style="font-family:'Cinzel',serif;font-size:.75rem;color:var(--ouro);letter-spacing:.2em;margin-bottom:.5rem">VISÃO GERAL DOS AVALIADORES</p>
+      <h2 style="font-family:'Cinzel',serif;font-size:1.4rem;color:var(--branco)">Relatório Consolidado</h2>
+      <p style="font-size:.85rem;color:var(--cinza);margin-top:.4rem">Selecione os testers e gere o PDF com os dados unificados</p>
+    </div>
+
+    <!-- lista de testers -->
+    <div style="margin-bottom:2rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <p style="font-family:'Cinzel',serif;font-size:.82rem;color:var(--ouro-cl);letter-spacing:.08em">AVALIADORES</p>
+        <div style="display:flex;gap:.5rem">
+          <button class="btn-sm" onclick="selecionarTodosDev(true)">Selecionar todos</button>
+          <button class="btn-sm" onclick="selecionarTodosDev(false)">Desmarcar todos</button>
+        </div>
+      </div>
+      <div id="devTesterLista"></div>
+    </div>
+
+    <!-- resumo rápido -->
+    <div id="devResumo" style="margin-bottom:2rem"></div>
+
+    <!-- botão gerar -->
+    <button class="btn-enviar" onclick="gerarPDFDev()">✦ Gerar PDF Consolidado dos Selecionados ✦</button>
+  </div>
+</div>
+
+<!-- modal confirmação deletar -->
+<div class="modal-bg" id="modalDeletar">
+  <div class="modal">
+    <h2 style="color:var(--vermelho)">Deletar Dados</h2>
+    <p id="modalDeletarTxt">Tem certeza que deseja deletar os dados deste avaliador? Esta ação não pode ser desfeita.</p>
+    <div class="modal-btns">
+      <button class="modal-btn" onclick="fecharModal('modalDeletar')">Cancelar</button>
+      <button class="modal-btn danger" onclick="confirmarDeletar()">Deletar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
