@@ -1577,6 +1577,7 @@ function renderizarPainelDev(){
       </div>
       <div class="dev-tester-nota">${notaGeral !== '—' ? notaGeral+'/5' : '—'}</div>
       <div class="dev-tester-btns">
+        <button class="btn-sm" onclick="gerarPDFIndividualDev('${t}')">↓ PDF</button>
         <button class="btn-sm danger" onclick="pedirDeletar('${t}')">Deletar</button>
       </div>`;
     card.classList.add('selecionado');
@@ -1795,7 +1796,11 @@ function gerarPDFDev(){
   rodape();
 
   // ── PÁG 2: TABELA COMPARATIVA DE NOTAS ──
-  novaPag();
+  doc.addPage(); pag++;
+  doc.setFillColor(...BG); doc.rect(0,0,W,H,'F');
+  doc.setFillColor(...ROXO); doc.rect(0,0,4,H,'F');
+  doc.setFillColor(...OURO); doc.rect(0,0,1.5,H,'F');
+  y=15; rodape();
   secHeader('TABELA COMPARATIVA — NOTAS POR AREA');
 
   // cabeçalho da tabela
@@ -1915,22 +1920,36 @@ function gerarPDFDev(){
     'Sound Design':          {grupos:['som_s1','som_s2']},
     'UI / UX':               {grupos:['ui_s1','ui_s2']},
     'Game Design':           {grupos:['gd_s1','gd_s2']},
-    'Impressão Final':       {grupos:['geral_im']},
   };
+
+  // adicionar Impressao Final manualmente com chaves geral_im_1..5
+  const IMPRESSAO_PERGS = [
+    'Potencial de entrega ao publico-alvo',
+    'Recomendaria o jogo',
+    'Tematica abordada com respeito',
+    'Motivou a completar o jogo',
+    'Experiencia satisfatoria na build alpha',
+  ];
 
   Object.entries(SECOES_DEF).forEach(([nome, {grupos}]) => {
     checarY(10);
-    // calcula média de todas as perguntas dessa seção para todos os testers
     const vals = [];
     dadosTodos.forEach(d => {
-      grupos.forEach(sk => {
-        const sec = PERGUNTAS[sk];
-        if(!sec) return;
-        sec.pergs.forEach((_,i) => {
-          const v = parseFloat(d[`${sk}_${i+1}`]||0);
+      if(nome === 'Impressao Final'){
+        for(let i=1;i<=5;i++){
+          const v = parseFloat(d[`geral_im_${i}`]||0);
           if(v>0) vals.push(v);
+        }
+      } else {
+        grupos.forEach(sk => {
+          const sec = PERGUNTAS[sk];
+          if(!sec) return;
+          sec.pergs.forEach((_,i) => {
+            const v = parseFloat(d[`${sk}_${i+1}`]||0);
+            if(v>0) vals.push(v);
+          });
         });
-      });
+      }
     });
     const med = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length) : null;
     const pct = med ? (med/5*100).toFixed(0) : 0;
@@ -2036,6 +2055,24 @@ function gerarPDFDev(){
   });
 
   doc.save('EnigmaPurpura_RelatorioDevConsolidado_'+new Date().toISOString().slice(0,10)+'.pdf');
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// PDF INDIVIDUAL — gerado pelo painel do dev
+// ══════════════════════════════════════════════════════════════
+function gerarPDFIndividualDev(nomeT){
+  // salva o tester atual, gera o PDF do tester selecionado e restaura
+  const testerOriginal = testerAtual;
+  const respostasOriginais = respostas;
+
+  testerAtual = nomeT;
+  respostas   = carregarLocal(nomeT);
+
+  gerarPDF(); // reutiliza a função já existente do tester
+
+  testerAtual = testerOriginal;
+  respostas   = respostasOriginais;
 }
 
 // ══════════════════════════════════════════════════════════════
