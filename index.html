@@ -1240,30 +1240,46 @@ function gerarPDF(){
   }
 
   function pergunta(texto, resposta, obs=''){
-    const linhas = doc.splitTextToSize('• '+texto, TW-20);
-    checarY(linhas.length * 5 + 14);
+    const LH = 5.2; // line height mm para fontSize 8.5
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica','normal');
+    const linhasTexto = doc.splitTextToSize('• '+texto, TW - 8);
+    const altTexto = linhasTexto.length * LH + 4;
+
+    const altResposta = 8;
+
+    doc.setFontSize(7.5);
+    let obsLinhas = [];
+    let altObs = 0;
+    if(obs && obs.trim()){
+      obsLinhas = doc.splitTextToSize('Obs: '+obs, TW - 8);
+      altObs = obsLinhas.length * 4.8 + 4;
+    }
+
+    const cardH = altTexto + altResposta + altObs + 4;
+    checarY(cardH + 4);
 
     // fundo card
-    const cardH = linhas.length*5 + (obs?16:10);
     doc.setFillColor(34, 14, 58);
     doc.roundedRect(ML, y, TW, cardH, 2, 2, 'F');
     doc.setDrawColor(...ROXO);
     doc.setLineWidth(0.3);
     doc.roundedRect(ML, y, TW, cardH, 2, 2, 'S');
 
-    // texto
+    // texto pergunta
     doc.setFontSize(8.5);
     doc.setTextColor(...TEXTO);
     doc.setFont('helvetica','normal');
-    doc.text(linhas, ML+3, y+5);
+    doc.text(linhasTexto, ML+3, y+5);
 
-    // resposta
-    const ry = y + linhas.length*5 + 2;
+    // resposta — sempre abaixo do texto com margem fixa
+    const ry = y + altTexto + 2;
     if(resposta && resposta !== ''){
       doc.setFontSize(9);
       doc.setTextColor(...OURO);
       doc.setFont('helvetica','bold');
-      doc.text('Nota: '+resposta, ML+3, ry);
+      doc.text('Resposta: '+resposta, ML+3, ry);
     } else {
       doc.setFontSize(8);
       doc.setTextColor(...CINZA);
@@ -1271,17 +1287,15 @@ function gerarPDF(){
       doc.text('Não respondida', ML+3, ry);
     }
 
-    // obs
-    if(obs){
+    // obs — abaixo da resposta
+    if(obsLinhas.length > 0){
       doc.setFontSize(7.5);
       doc.setTextColor(...CINZA);
       doc.setFont('helvetica','italic');
-      const obsLinhas = doc.splitTextToSize('Obs: '+obs, TW-6);
-      doc.text(obsLinhas, ML+3, ry+6);
-      y += cardH + 3;
-    } else {
-      y += cardH + 3;
+      doc.text(obsLinhas, ML+3, ry + 7);
     }
+
+    y += cardH + 3;
   }
 
   function textoAberto(label, valor){
